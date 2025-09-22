@@ -1,6 +1,4 @@
-# SecDev Course Template
-
-Стартовый шаблон для студенческого репозитория (HSE SecDev 2025).
+# Task tracker
 
 ## Быстрый старт
 ```bash
