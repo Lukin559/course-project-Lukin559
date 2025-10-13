@@ -1,2 +1,4 @@
 fastapi==0.112.2
 uvicorn==0.30.5
+slowapi==0.1.9
+redis==5.0.1
