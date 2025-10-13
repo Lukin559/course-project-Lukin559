@@ -1,0 +1,19 @@
+# Global owners
+* @ilalukin
+
+# API and core application logic
+/app/ @ilalukin
+
+# Tests
+/tests/ @ilalukin
+
+# CI/CD and project configuration
+/.github/ @ilalukin
+/pyproject.toml @ilalukin
+/requirements*.txt @ilalukin
+/Dockerfile @ilalukin
+/compose.yaml @ilalukin
+
+# Documentation
+/README.md @ilalukin
+/SECURITY.md @ilalukin
