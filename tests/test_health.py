@@ -8,4 +8,9 @@ client = TestClient(app)
 def test_health_ok():
     r = client.get("/health")
     assert r.status_code == 200
-    assert r.json() == {"status": "ok", "service": "task-tracker"}
+    body = r.json()
+    assert body["status"] == "ok"
+    assert body["service"] == "task-tracker"
+    assert "correlation_id" in body
+    # Also check header
+    assert "X-Correlation-ID" in r.headers

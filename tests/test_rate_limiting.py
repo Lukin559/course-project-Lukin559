@@ -11,7 +11,10 @@ def test_rate_limiting_health_endpoint():
     for i in range(5):
         response = client.get("/health")
         assert response.status_code == 200
-        assert response.json() == {"status": "ok", "service": "task-tracker"}
+        body = response.json()
+        assert body["status"] == "ok"
+        assert body["service"] == "task-tracker"
+        assert "correlation_id" in body
 
     # Note: Full rate limiting test would require many requests
     # This is a basic functionality test
@@ -21,8 +24,8 @@ def test_rate_limiting_create_item():
     """Test rate limiting on create item endpoint"""
     # Make a few requests to test the endpoint works
     for i in range(3):
-        response = client.post("/items", params={"name": f"Task {i}"})
-        assert response.status_code == 200  # Note: returns 200, not 201
+        response = client.post("/items", json={"name": f"Task {i}"})
+        assert response.status_code == 201
         assert "id" in response.json()
         assert response.json()["name"] == f"Task {i}"
 
@@ -33,7 +36,7 @@ def test_rate_limiting_create_item():
 def test_rate_limiting_get_item():
     """Test rate limiting on get item endpoint"""
     # First create an item
-    create_response = client.post("/items", params={"name": "Test Task"})
+    create_response = client.post("/items", json={"name": "Test Task"})
     item_id = create_response.json()["id"]
 
     # Make a few requests to test the endpoint works
@@ -52,11 +55,13 @@ def test_rate_limiting_different_endpoints():
     # Test that both endpoints work
     health_response = client.get("/health")
     assert health_response.status_code == 200
-    assert health_response.json() == {"status": "ok", "service": "task-tracker"}
+    body = health_response.json()
+    assert body["status"] == "ok"
+    assert body["service"] == "task-tracker"
 
     # Create item should also work
-    create_response = client.post("/items", params={"name": "Still Working"})
-    assert create_response.status_code == 200
+    create_response = client.post("/items", json={"name": "Still Working"})
+    assert create_response.status_code == 201
     assert "id" in create_response.json()
 
     # Note: Full rate limiting test would require many requests
@@ -68,7 +73,9 @@ def test_rate_limiting_error_response():
     # Test basic functionality
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "service": "task-tracker"}
+    body = response.json()
+    assert body["status"] == "ok"
+    assert body["service"] == "task-tracker"
 
     # Note: Full rate limiting test would require many requests
     # This is a basic functionality test
