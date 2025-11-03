@@ -1,0 +1,19 @@
+# Global owners
+* @Lukin559
+
+# API and core application logic
+/app/ @Lukin559
+
+# Tests
+/tests/ @Lukin559
+
+# CI/CD and project configuration
+/.github/ @Lukin559
+/pyproject.toml @Lukin559
+/requirements*.txt @Lukin559
+/Dockerfile @Lukin559
+/compose.yaml @Lukin559
+
+# Documentation
+/README.md @Lukin559
+/SECURITY.md @Lukin559
