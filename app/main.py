@@ -5,6 +5,9 @@ from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 # Configure logging
 logging.basicConfig(
@@ -12,16 +15,23 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Initialize rate limiter (NFR-008: Task API Rate Limiting)
+limiter = Limiter(key_func=get_remote_address)
+
 app = FastAPI(
     title="SecDev Course App",
     version="0.1.0",
     description=(
         "A comprehensive FastAPI application with proper validation, "
-        "logging, and error handling"
+        "logging, error handling, and rate limiting"
     ),
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+# Add rate limiter to app
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 class ApiError(Exception):
@@ -95,8 +105,11 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 
 @app.get("/health")
-def health():
-    return {"status": "ok"}
+@limiter.limit("100/minute")  # NFR-008: Health check rate limiting
+def health(request: Request):
+    """Health check endpoint with rate limiting"""
+    logger.info("Health check requested")
+    return {"status": "ok", "service": "task-tracker"}
 
 
 # In-memory database with improved structure
@@ -104,8 +117,9 @@ _DB = {"items": [], "next_id": 1}
 
 
 @app.post("/items", response_model=ItemResponse, status_code=201)
-def create_item(item_data: ItemCreate):
-    """Create a new item with validation."""
+@limiter.limit("200/minute")  # NFR-008: Task creation rate limiting
+def create_item(request: Request, item_data: ItemCreate):
+    """Create a new item with validation and rate limiting."""
     logger.info(f"Creating new item: {item_data.name}")
 
     item = {
@@ -124,15 +138,17 @@ def create_item(item_data: ItemCreate):
 
 
 @app.get("/items", response_model=List[ItemResponse])
-def list_items():
-    """Get all items."""
+@limiter.limit("300/minute")  # NFR-008: Task listing rate limiting
+def list_items(request: Request):
+    """Get all items with rate limiting."""
     logger.info(f"Listing {len(_DB['items'])} items")
     return _DB["items"]
 
 
 @app.get("/items/{item_id}", response_model=ItemResponse)
-def get_item(item_id: int):
-    """Get a specific item by ID."""
+@limiter.limit("300/minute")  # NFR-008: Task retrieval rate limiting
+def get_item(request: Request, item_id: int):
+    """Get a specific item by ID with rate limiting."""
     logger.info(f"Getting item with ID: {item_id}")
 
     for item in _DB["items"]:
@@ -145,8 +161,9 @@ def get_item(item_id: int):
 
 
 @app.put("/items/{item_id}", response_model=ItemResponse)
-def update_item(item_id: int, item_data: ItemUpdate):
-    """Update an existing item."""
+@limiter.limit("200/minute")  # NFR-008: Task update rate limiting
+def update_item(request: Request, item_id: int, item_data: ItemUpdate):
+    """Update an existing item with rate limiting."""
     logger.info(f"Updating item with ID: {item_id}")
 
     for i, item in enumerate(_DB["items"]):
@@ -164,8 +181,9 @@ def update_item(item_id: int, item_data: ItemUpdate):
 
 
 @app.delete("/items/{item_id}", status_code=204)
-def delete_item(item_id: int):
-    """Delete an item."""
+@limiter.limit("200/minute")  # NFR-008: Task deletion rate limiting
+def delete_item(request: Request, item_id: int):
+    """Delete an item with rate limiting."""
     logger.info(f"Deleting item with ID: {item_id}")
 
     for i, item in enumerate(_DB["items"]):
