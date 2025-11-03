@@ -32,7 +32,18 @@ jobs:
           isort --check-only .
 
       - name: Tests
-        run: pytest -q
+        run: pytest -q --cov=app --cov-report=xml
 
       - name: Pre-commit (all files)
         run: pre-commit run --all-files
+
+      - name: Security check
+        run: |
+          pip install bandit
+          bandit -r app/ -f json -o bandit-report.json || true
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false
