@@ -1,17 +1,86 @@
+# Git
 .git
 .gitignore
 .gitattributes
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-*.sqlite
-*.db
-.venv/
-dist/
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
 build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 .pytest_cache/
 .coverage
+.coverage.*
 htmlcov/
-node_modules/
+.tox/
+.nox/
+.hypothesis/
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# Poetry
+poetry.lock
+*.lock
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.circleci/
+.travis.yml
+
+# Documentation
+docs/
+*.md
+README.md
+
+# Testing
+tests/
+pytest.ini
+.pytest_cache/
+coverage/
+
+# Other
 .env
+.env.local
+.env.*.local
+*.tmp
+*.log
+node_modules/
