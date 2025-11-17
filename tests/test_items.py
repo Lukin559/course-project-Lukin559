@@ -64,7 +64,8 @@ def test_get_item_not_found():
     response = client.get("/items/999")
     assert response.status_code == 404
     data = response.json()
-    assert data["error"]["code"] == "not_found"
+    assert "type" in data and "not_found" in data["type"]
+    assert data["status"] == 404
 
 
 def test_list_items():
