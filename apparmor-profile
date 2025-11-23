@@ -11,22 +11,25 @@ profile secdev-app flags=(attach_disconnected,mediate_deleted) {
   network inet6 udp,
 
   # Allow Python and application execution
-  /usr/bin/python3.12 ix,
-  /usr/local/bin/python* ix,
-  /usr/local/bin/uvicorn ix,
-  /usr/bin/python* ix,
+  # ix = inherit execute (use parent's profile)
+  # mr = allow memory mapping for shared libs
+  /usr/bin/python3.12 ixr,
+  /usr/local/bin/python* ixr,
+  /usr/local/bin/uvicorn ixr,
+  /usr/bin/python* ixr,
 
   # Application directory
   /app/ r,
   /app/** r,
 
   # Python libraries and shared objects
-  /usr/lib/python3.12/** r,
-  /usr/local/lib/python3.12/** r,
-  /usr/lib/** r,
-  /usr/local/lib/** r,
-  /lib/** r,
-  /lib64/** r,
+  # Need mr (read + mmap) for shared libraries to load properly
+  /usr/lib/python3.12/** mr,
+  /usr/local/lib/python3.12/** mr,
+  /usr/lib/** mr,
+  /usr/local/lib/** mr,
+  /lib/** mr,
+  /lib64/** mr,
 
   # Temp and runtime directories
   /tmp/ r,
