@@ -38,10 +38,11 @@ services:
     # 3. Security hardening options (C2 ★★2)
     security_opt:
       - no-new-privileges:true
-      # Seccomp: Custom restrictive profile (300+ whitelisted syscalls)
-      # Blocks dangerous syscalls: mount, reboot, kexec_load, etc.
+      # Seccomp: Custom blacklist profile adapted for Python/FastAPI
+      # Blocks 50+ dangerous syscalls: mount, reboot, kexec, ptrace, etc.
+      # Uses SCMP_ACT_ALLOW as default (better compatibility with Python)
       - seccomp:./seccomp-profile.json
-      # AppArmor: Custom MAC profile (Linux only)
+      # AppArmor: Custom MAC profile (Linux only) - provides additional hardening
       # Load profile first: sudo bash scripts/load-security-profiles.sh
       - apparmor=secdev-app
 

@@ -181,7 +181,7 @@ jobs:
         run: |
           echo "=== Testing with docker compose ==="
           echo "Security profiles active:"
-          echo "  - Seccomp: Custom profile (300+ syscalls, adapted for Python/FastAPI)"
+          echo "  - Seccomp: Custom blacklist (50+ dangerous syscalls blocked)"
           echo "  - AppArmor: secdev-app (custom MAC policy)"
           echo ""
 
