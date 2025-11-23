@@ -74,4 +74,3 @@ profile secdev-app flags=(attach_disconnected,mediate_deleted) {
   capability setuid,
   capability setgid,
 }
-

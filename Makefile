@@ -170,6 +170,17 @@ reports: lint-docker build scan sbom history inspect
 	@echo ""
 	@echo "✓ Reports ready for CI artifacts"
 
+# Load security profiles (AppArmor, seccomp)
+load-profiles:
+	@echo "=== Loading Security Profiles (C2 ★★2) ==="
+	@chmod +x scripts/load-security-profiles.sh
+	@bash scripts/load-security-profiles.sh
+	@echo ""
+	@echo "To enable profiles in docker-compose.yml:"
+	@echo "  1. Uncomment 'apparmor=secdev-app' line"
+	@echo "  2. Uncomment 'seccomp=seccomp-profile.json' line"
+	@echo "  3. Run: make run"
+
 # Clean up
 clean:
 	@echo "Cleaning up..."

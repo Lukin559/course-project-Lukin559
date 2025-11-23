@@ -52,4 +52,3 @@ echo "  2. Run: docker compose up"
 echo ""
 echo "To verify AppArmor profile:"
 echo "  sudo aa-status | grep secdev-app"
-
