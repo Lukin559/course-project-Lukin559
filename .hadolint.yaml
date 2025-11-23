@@ -24,4 +24,3 @@ trustedRegistries:
 
 # Strict mode (enforce security checks)
 strict: true
-

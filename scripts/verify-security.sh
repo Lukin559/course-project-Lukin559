@@ -116,13 +116,13 @@ echo ""
 echo "=== 8. Checking capabilities (with compose) ==="
 if [ -f "docker-compose.yml" ]; then
     echo "Verifying docker-compose.yml security options..."
-    
+
     if grep -q "cap_drop" docker-compose.yml; then
         pass "cap_drop is configured in docker-compose.yml"
     else
         warn "cap_drop not found in docker-compose.yml"
     fi
-    
+
     if grep -q "no-new-privileges" docker-compose.yml; then
         pass "no-new-privileges is configured"
     else
@@ -187,4 +187,3 @@ echo "  1. Run 'make lint-docker' for Dockerfile linting"
 echo "  2. Run 'make scan' for vulnerability scanning"
 echo "  3. Run 'make reports' for full security reports"
 echo "  4. Run 'make ci' for complete CI pipeline"
-

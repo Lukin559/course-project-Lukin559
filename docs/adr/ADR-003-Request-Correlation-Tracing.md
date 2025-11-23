@@ -91,10 +91,10 @@ class CorrelationMiddleware:
         # Get or generate correlation ID
         cid = request.headers.get("X-Correlation-ID") or str(uuid.uuid4())
         set_correlation_id(cid)
-        
+
         # Add to request state for later access
         request.state.correlation_id = cid
-        
+
         # Log request
         logger.info(
             "HTTP request",
@@ -105,12 +105,12 @@ class CorrelationMiddleware:
                 "remote_addr": request.client.host,
             }
         )
-        
+
         response = await call_next(request)
-        
+
         # Add correlation ID to response headers
         response.headers["X-Correlation-ID"] = cid
-        
+
         # Log response
         logger.info(
             "HTTP response",
@@ -120,7 +120,7 @@ class CorrelationMiddleware:
                 "path": request.url.path,
             }
         )
-        
+
         return response
 ```
 

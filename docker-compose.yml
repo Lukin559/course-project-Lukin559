@@ -4,20 +4,20 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    
+
     # Container name for easy reference
     container_name: secdev-app
-    
+
     # Ports: host:container
     ports:
       - "8000:8000"
-    
+
     # Environment variables (non-secret)
     environment:
       PYTHONUNBUFFERED: "1"
       PYTHONDONTWRITEBYTECODE: "1"
       LOG_LEVEL: "INFO"
-    
+
     # Health check (matches Dockerfile HEALTHCHECK)
     healthcheck:
       test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health', timeout=2)"]
@@ -25,34 +25,34 @@ services:
       timeout: 3s
       retries: 3
       start_period: 10s
-    
+
     # 1. No privileged mode (default: false)
     privileged: false
-    
+
     # 2. Drop dangerous capabilities, add only needed ones
     cap_drop:
       - ALL
     cap_add:
       - NET_BIND_SERVICE  # Only if needed for port binding
-    
+
     # 3. Prevent privilege escalation
     security_opt:
       - no-new-privileges:true
       # Use AppArmor/SELinux if available (example for AppArmor)
       # - apparmor=docker-default
-    
+
     # 4. Read-only root filesystem (for stateless apps)
     # read_only: true
     # tmpfs:
     #   - /tmp
     #   - /run
-    
+
     # 5. Disable IPC namespace sharing
     ipc: "private"
-    
+
     # 6. Restrict shared memory size
     shm_size: 64mb
-    
+
     # Resource limits (optional)
     deploy:
       resources:
@@ -62,14 +62,14 @@ services:
         reservations:
           cpus: '0.25'
           memory: 256M
-    
+
     # Logging
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
-    
+
     # Network
     networks:
       - app-network
