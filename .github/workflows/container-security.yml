@@ -182,16 +182,16 @@ jobs:
           docker stop secdev-test
           docker rm secdev-test
 
-      - name: Test with docker-compose
+      - name: Test with docker compose
         run: |
-          echo "=== Testing with docker-compose ==="
-          docker-compose up -d
+          echo "=== Testing with docker compose ==="
+          docker compose up -d
           
           sleep 10
           
           echo ""
           echo "=== Health Check Status ==="
-          docker-compose ps
+          docker compose ps
           
           echo ""
           echo "=== Application Health Endpoint ==="
@@ -200,5 +200,5 @@ jobs:
           echo ""
           echo "✅ PASSED: Application is healthy"
           
-          docker-compose down
+          docker compose down
 

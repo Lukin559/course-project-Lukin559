@@ -56,7 +56,7 @@ class TestCorrelationIdGeneration:
         correlation_id = response.headers["X-Correlation-ID"]
 
         # UUID format: 8-4-4-4-12 hex characters with dashes
-        uuid_pattern = r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+        uuid_pattern = r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
         assert re.match(
             uuid_pattern, correlation_id.lower()
         ), f"Invalid UUID format: {correlation_id}"
@@ -79,20 +79,14 @@ class TestCorrelationIdHeaderPropagation:
     def test_correlation_id_from_request_header_preserved(self):
         """Test that client-provided correlation ID is preserved."""
         custom_cid = "custom-correlation-id-123456"
-        response = client.get(
-            "/health",
-            headers={"X-Correlation-ID": custom_cid}
-        )
+        response = client.get("/health", headers={"X-Correlation-ID": custom_cid})
         assert response.status_code == 200
         assert response.headers["X-Correlation-ID"] == custom_cid
 
     def test_correlation_id_custom_uuid_preserved(self):
         """Test that client-provided custom UUID is preserved."""
         custom_uuid = "550e8400-e29b-41d4-a716-446655440000"
-        response = client.get(
-            "/health",
-            headers={"X-Correlation-ID": custom_uuid}
-        )
+        response = client.get("/health", headers={"X-Correlation-ID": custom_uuid})
         assert response.headers["X-Correlation-ID"] == custom_uuid
 
     def test_correlation_id_in_error_response_header(self):
@@ -111,10 +105,7 @@ class TestCorrelationIdHeaderPropagation:
     def test_correlation_id_header_case_insensitive(self):
         """Test that header name is case-insensitive."""
         custom_cid = "case-insensitive-test-123"
-        response = client.get(
-            "/health",
-            headers={"x-correlation-id": custom_cid}
-        )
+        response = client.get("/health", headers={"x-correlation-id": custom_cid})
         # FastAPI handles header case insensitivity
         assert response.headers.get("X-Correlation-ID") is not None
 
@@ -138,10 +129,7 @@ class TestCorrelationIdInResponse:
     def test_correlation_id_body_matches_header(self):
         """Test that correlation_id in body matches header."""
         custom_cid = "body-header-match-test-123"
-        response = client.get(
-            "/items/999",
-            headers={"X-Correlation-ID": custom_cid}
-        )
+        response = client.get("/items/999", headers={"X-Correlation-ID": custom_cid})
         header_cid = response.headers["X-Correlation-ID"]
         body_cid = response.json()["correlation_id"]
         assert header_cid == body_cid == custom_cid
@@ -158,7 +146,7 @@ class TestCorrelationIdAuditTrail:
         create_response = client.post(
             "/items",
             json={"name": "Audit Trail Test", "price": 99.99},
-            headers={"X-Correlation-ID": custom_cid}
+            headers={"X-Correlation-ID": custom_cid},
         )
         assert create_response.status_code == 201
         assert create_response.headers["X-Correlation-ID"] == custom_cid
@@ -167,8 +155,7 @@ class TestCorrelationIdAuditTrail:
         # Retrieve item with different correlation ID
         different_cid = "different-" + "b" * 25
         get_response = client.get(
-            f"/items/{item_id}",
-            headers={"X-Correlation-ID": different_cid}
+            f"/items/{item_id}", headers={"X-Correlation-ID": different_cid}
         )
         assert get_response.status_code == 200
         # Different request should have different correlation ID
@@ -185,15 +172,14 @@ class TestCorrelationIdAuditTrail:
         create_response = client.post(
             "/items",
             json={"name": "Audit Item"},
-            headers={"X-Correlation-ID": audit_cid}
+            headers={"X-Correlation-ID": audit_cid},
         )
         responses.append(create_response)
         item_id = create_response.json()["id"]
 
         # Get
         get_response = client.get(
-            f"/items/{item_id}",
-            headers={"X-Correlation-ID": audit_cid}
+            f"/items/{item_id}", headers={"X-Correlation-ID": audit_cid}
         )
         responses.append(get_response)
 
@@ -207,10 +193,7 @@ class TestCorrelationIdRobustness:
 
     def test_correlation_id_with_empty_string(self):
         """Test handling of empty correlation ID header."""
-        response = client.get(
-            "/health",
-            headers={"X-Correlation-ID": ""}
-        )
+        response = client.get("/health", headers={"X-Correlation-ID": ""})
         # Should generate new ID if provided ID is empty
         assert response.status_code == 200
         cid = response.headers["X-Correlation-ID"]
@@ -219,10 +202,7 @@ class TestCorrelationIdRobustness:
     def test_correlation_id_with_special_characters(self):
         """Test correlation ID with special characters."""
         special_cid = "test-!@#$%^&*()-_=+[]{}|;:,.<>?"
-        response = client.get(
-            "/health",
-            headers={"X-Correlation-ID": special_cid}
-        )
+        response = client.get("/health", headers={"X-Correlation-ID": special_cid})
         # Should preserve or handle gracefully
         assert response.status_code == 200
         # Header should exist (may or may not preserve special chars)
@@ -231,20 +211,14 @@ class TestCorrelationIdRobustness:
     def test_correlation_id_with_very_long_string(self):
         """Test correlation ID with very long string."""
         long_cid = "a" * 10000
-        response = client.get(
-            "/health",
-            headers={"X-Correlation-ID": long_cid}
-        )
+        response = client.get("/health", headers={"X-Correlation-ID": long_cid})
         # Should handle gracefully (may truncate or preserve)
         assert response.status_code == 200
 
     def test_correlation_id_with_whitespace(self):
         """Test correlation ID with whitespace."""
         cid_with_space = "test cid with space"
-        response = client.get(
-            "/health",
-            headers={"X-Correlation-ID": cid_with_space}
-        )
+        response = client.get("/health", headers={"X-Correlation-ID": cid_with_space})
         # Should handle (HTTP headers strip leading/trailing)
         assert response.status_code == 200
 
@@ -255,10 +229,7 @@ class TestCorrelationIdMultipleErrorTypes:
     def test_correlation_id_in_not_found_error(self):
         """Test correlation ID in 404 error."""
         cid = "not-found-error-test-123456"
-        response = client.get(
-            "/items/999",
-            headers={"X-Correlation-ID": cid}
-        )
+        response = client.get("/items/999", headers={"X-Correlation-ID": cid})
         assert response.status_code == 404
         assert response.headers["X-Correlation-ID"] == cid
         assert response.json()["correlation_id"] == cid
@@ -267,9 +238,7 @@ class TestCorrelationIdMultipleErrorTypes:
         """Test correlation ID in 422 validation error."""
         cid = "validation-error-test-123456"
         response = client.post(
-            "/items",
-            json={"name": ""},
-            headers={"X-Correlation-ID": cid}
+            "/items", json={"name": ""}, headers={"X-Correlation-ID": cid}
         )
         assert response.status_code == 422
         assert response.headers["X-Correlation-ID"] == cid
@@ -278,10 +247,7 @@ class TestCorrelationIdMultipleErrorTypes:
     def test_correlation_id_in_success_response(self):
         """Test correlation ID in successful response."""
         cid = "success-response-test-123456"
-        response = client.get(
-            "/health",
-            headers={"X-Correlation-ID": cid}
-        )
+        response = client.get("/health", headers={"X-Correlation-ID": cid})
         assert response.status_code == 200
         assert response.headers["X-Correlation-ID"] == cid
         # Success response includes correlation_id

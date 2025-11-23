@@ -64,7 +64,7 @@ async def correlation_middleware(request: Request, call_next):
             "method": request.method,
             "path": request.url.path,
             "client": request.client.host if request.client else "unknown",
-        }
+        },
     )
 
     response = await call_next(request)
@@ -78,7 +78,7 @@ async def correlation_middleware(request: Request, call_next):
             "correlation_id": cid,
             "status": response.status_code,
             "path": request.url.path,
-        }
+        },
     )
 
     return response
@@ -88,7 +88,9 @@ async def correlation_middleware(request: Request, call_next):
 class ApiError(Exception):
     """Custom API error with RFC 7807 formatting."""
 
-    def __init__(self, code: str, message: str, status: int = 400, details: Optional[dict] = None):
+    def __init__(
+        self, code: str, message: str, status: int = 400, details: Optional[dict] = None
+    ):
         self.code = code
         self.message = message
         self.status = status
@@ -120,7 +122,7 @@ async def api_error_handler(request: Request, exc: ApiError):
             "error_message": exc.message,
             "error_status": exc.status,
             "request_path": path,
-        }
+        },
     )
 
     return JSONResponse(
@@ -153,7 +155,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
             "error_status": exc.status_code,
             "request_path": path,
             "detail": detail_str,
-        }
+        },
     )
 
     # For validation errors (422), provide structured format
@@ -224,7 +226,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             "request_path": path,
             "error_count": len(exc.errors()),
             "fields": list(errors_by_field.keys()),
-        }
+        },
     )
 
     return JSONResponse(
@@ -379,7 +381,7 @@ def create_item(request: Request, item_data: ItemCreate):
         extra={
             "correlation_id": correlation_id,
             "item_name": item_data.name,
-        }
+        },
     )
 
     item = {
@@ -399,7 +401,7 @@ def create_item(request: Request, item_data: ItemCreate):
             "correlation_id": correlation_id,
             "item_id": item["id"],
             "item_name": item_data.name,
-        }
+        },
     )
     return item
 
@@ -414,7 +416,7 @@ def list_items(request: Request):
         extra={
             "correlation_id": correlation_id,
             "item_count": len(_DB["items"]),
-        }
+        },
     )
     return _DB["items"]
 
@@ -429,7 +431,7 @@ def get_item(request: Request, item_id: int):
         extra={
             "correlation_id": correlation_id,
             "item_id": item_id,
-        }
+        },
     )
 
     for item in _DB["items"]:
@@ -440,7 +442,7 @@ def get_item(request: Request, item_id: int):
                     "correlation_id": correlation_id,
                     "item_id": item_id,
                     "item_name": item["name"],
-                }
+                },
             )
             return item
 
@@ -449,7 +451,7 @@ def get_item(request: Request, item_id: int):
         extra={
             "correlation_id": correlation_id,
             "item_id": item_id,
-        }
+        },
     )
     raise ApiError(code="not_found", message="item not found", status=404)
 
@@ -464,7 +466,7 @@ def update_item(request: Request, item_id: int, item_data: ItemUpdate):
         extra={
             "correlation_id": correlation_id,
             "item_id": item_id,
-        }
+        },
     )
 
     for i, item in enumerate(_DB["items"]):
@@ -480,7 +482,7 @@ def update_item(request: Request, item_id: int, item_data: ItemUpdate):
                     "correlation_id": correlation_id,
                     "item_id": item_id,
                     "item_name": item["name"],
-                }
+                },
             )
             return item
 
@@ -489,7 +491,7 @@ def update_item(request: Request, item_id: int, item_data: ItemUpdate):
         extra={
             "correlation_id": correlation_id,
             "item_id": item_id,
-        }
+        },
     )
     raise ApiError(code="not_found", message="item not found", status=404)
 
@@ -504,7 +506,7 @@ def delete_item(request: Request, item_id: int):
         extra={
             "correlation_id": correlation_id,
             "item_id": item_id,
-        }
+        },
     )
 
     for i, item in enumerate(_DB["items"]):
@@ -516,7 +518,7 @@ def delete_item(request: Request, item_id: int):
                     "correlation_id": correlation_id,
                     "item_id": item_id,
                     "item_name": deleted_item["name"],
-                }
+                },
             )
             return
 
@@ -525,6 +527,6 @@ def delete_item(request: Request, item_id: int):
         extra={
             "correlation_id": correlation_id,
             "item_id": item_id,
-        }
+        },
     )
     raise ApiError(code="not_found", message="item not found", status=404)

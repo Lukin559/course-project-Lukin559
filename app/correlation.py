@@ -5,7 +5,7 @@ from typing import Optional
 
 # Context variable to store correlation ID for current request
 correlation_id_var: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
-    'correlation_id', default=None
+    "correlation_id", default=None
 )
 
 

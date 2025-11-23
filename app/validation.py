@@ -124,14 +124,10 @@ class InputValidator:
 
         # Validate bounds
         if price < InputValidator.MIN_PRICE:
-            raise ValidationError(
-                f"price must be at least {InputValidator.MIN_PRICE}"
-            )
+            raise ValidationError(f"price must be at least {InputValidator.MIN_PRICE}")
 
         if price > InputValidator.MAX_PRICE:
-            raise ValidationError(
-                f"price must not exceed {InputValidator.MAX_PRICE}"
-            )
+            raise ValidationError(f"price must not exceed {InputValidator.MAX_PRICE}")
 
         # Round to 2 decimals to prevent float rounding errors
         return round(price, 2)
