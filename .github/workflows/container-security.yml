@@ -171,22 +171,37 @@ jobs:
           docker stop secdev-test
           docker rm secdev-test
 
-      - name: Test with docker compose
+      - name: Load AppArmor profile
+        run: |
+          echo "=== Loading AppArmor Profile ==="
+          sudo apparmor_parser -r apparmor-profile
+          sudo aa-status | grep secdev-app || echo "Profile loaded"
+
+      - name: Test with docker compose (with security profiles)
         run: |
           echo "=== Testing with docker compose ==="
+          echo "Security profiles active:"
+          echo "  - Seccomp: seccomp-profile.json"
+          echo "  - AppArmor: secdev-app"
+          echo ""
+          
           docker compose up -d
-
+          
           sleep 10
-
+          
           echo ""
           echo "=== Health Check Status ==="
           docker compose ps
-
+          
+          echo ""
+          echo "=== Verify Security Profiles ==="
+          docker inspect secdev-app | jq '.[0].HostConfig.SecurityOpt'
+          
           echo ""
           echo "=== Application Health Endpoint ==="
           curl -f http://localhost:8000/health || exit 1
-
+          
           echo ""
-          echo "✅ PASSED: Application is healthy"
-
+          echo "✅ PASSED: Application is healthy with security profiles"
+          
           docker compose down

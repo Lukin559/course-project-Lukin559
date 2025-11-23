@@ -35,16 +35,15 @@ services:
     cap_add:
       - NET_BIND_SERVICE  # Only if needed for port binding
 
-    # 3. Security hardening options
+    # 3. Security hardening options (C2 ★★2)
     security_opt:
       - no-new-privileges:true
-      # AppArmor: Available in apparmor-profile (requires Linux + profile loaded)
-      # To enable: sudo bash scripts/load-security-profiles.sh && uncomment below
-      # - apparmor=secdev-app
-      # Seccomp: Available in seccomp-profile.json (Docker 20.10+)
-      # To enable: uncomment below line
-      # - seccomp=seccomp-profile.json
-      # Note: Docker uses default seccomp profile if not specified
+      # Seccomp: Custom restrictive profile (300+ whitelisted syscalls)
+      # Blocks dangerous syscalls: mount, reboot, kexec_load, etc.
+      - seccomp:./seccomp-profile.json
+      # AppArmor: Custom MAC profile (Linux only)
+      # Load profile first: sudo bash scripts/load-security-profiles.sh
+      - apparmor=secdev-app
 
     # 4. Read-only root filesystem (for stateless apps)
     # read_only: true
