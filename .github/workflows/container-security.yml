@@ -184,24 +184,39 @@ jobs:
           echo "  - Seccomp: seccomp-profile.json"
           echo "  - AppArmor: secdev-app"
           echo ""
-          
+
           docker compose up -d
-          
-          sleep 10
-          
+
+          echo ""
+          echo "=== Waiting for application startup ==="
+          sleep 15
+
+          echo ""
+          echo "=== Container Logs ==="
+          docker compose logs
+
           echo ""
           echo "=== Health Check Status ==="
           docker compose ps
-          
+
           echo ""
           echo "=== Verify Security Profiles ==="
           docker inspect secdev-app | jq '.[0].HostConfig.SecurityOpt'
-          
+
           echo ""
           echo "=== Application Health Endpoint ==="
-          curl -f http://localhost:8000/health || exit 1
-          
-          echo ""
-          echo "✅ PASSED: Application is healthy with security profiles"
-          
+          for i in {1..10}; do
+            if curl -f http://localhost:8000/health; then
+              echo ""
+              echo "✅ PASSED: Application is healthy with security profiles"
+              docker compose down
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying..."
+            sleep 2
+          done
+
+          echo "❌ FAILED: Application did not respond"
+          docker compose logs
           docker compose down
+          exit 1
