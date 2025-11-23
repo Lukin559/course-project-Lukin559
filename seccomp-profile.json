@@ -23,7 +23,6 @@
         "bpf",
         "clock_adjtime",
         "clock_settime",
-        "clone3",
         "create_module",
         "delete_module",
         "finit_module",
