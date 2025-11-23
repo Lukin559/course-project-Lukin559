@@ -9,8 +9,9 @@ Tests validate:
 - Audit trail linking via correlation_id
 """
 
-from fastapi.testclient import TestClient
 import re
+
+from fastapi.testclient import TestClient
 
 from app.main import app
 
@@ -38,7 +39,7 @@ class TestCorrelationIdGeneration:
         """Test that PUT requests get a correlation ID."""
         # Create item first
         create_response = client.post("/items", json={"name": "Test"})
-        item_id = create_response.json()["id"]
+        _item_id = create_response.json()["id"]  # noqa: F841
 
         # Update item
         response = client.put("/items/{item_id}", json={"name": "Updated"})
@@ -56,7 +57,9 @@ class TestCorrelationIdGeneration:
 
         # UUID format: 8-4-4-4-12 hex characters with dashes
         uuid_pattern = r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-        assert re.match(uuid_pattern, correlation_id.lower()), f"Invalid UUID format: {correlation_id}"
+        assert re.match(
+            uuid_pattern, correlation_id.lower()
+        ), f"Invalid UUID format: {correlation_id}"
 
     def test_correlation_ids_are_unique(self):
         """Test that different requests get different correlation IDs."""
@@ -150,7 +153,7 @@ class TestCorrelationIdAuditTrail:
     def test_correlation_id_persists_through_create_and_retrieve(self):
         """Test correlation ID for complete lifecycle."""
         custom_cid = "lifecycle-test-" + "a" * 20
-        
+
         # Create item with correlation ID
         create_response = client.post(
             "/items",
@@ -174,10 +177,10 @@ class TestCorrelationIdAuditTrail:
     def test_correlation_id_for_audit_logging(self):
         """Test that correlation ID enables audit trail linking."""
         audit_cid = "audit-test-" + "c" * 25
-        
+
         # Multiple operations with same correlation ID (would log with same ID)
         responses = []
-        
+
         # Create
         create_response = client.post(
             "/items",

@@ -25,6 +25,3 @@ trustedRegistries:
 # Strict mode (enforce security checks)
 strict: true
 
-# Format output as JSON for CI parsing
-format: json
-

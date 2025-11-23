@@ -1,18 +1,19 @@
 import logging
+import uuid
 from datetime import datetime
 from typing import List, Optional
-import uuid
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
-from fastapi.exceptions import RequestValidationError
 
 from app.correlation import get_correlation_id, set_correlation_id
-from app.validation import InputValidator, ValidationError as InputValidationError
+from app.validation import InputValidator
+from app.validation import ValidationError as InputValidationError
 
 # Configure logging
 logging.basicConfig(
@@ -43,7 +44,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 @app.middleware("http")
 async def correlation_middleware(request: Request, call_next):
     """Middleware to inject correlation ID into request context.
-    
+
     Implements ADR-003: Request Correlation & Distributed Tracing.
     - Generate UUID for every request if not provided
     - Store in context for access in handlers/loggers
@@ -52,10 +53,10 @@ async def correlation_middleware(request: Request, call_next):
     # Get or generate correlation ID
     cid = request.headers.get("X-Correlation-ID") or str(uuid.uuid4())
     set_correlation_id(cid)
-    
+
     # Add to request state for later access
     request.state.correlation_id = cid
-    
+
     logger.info(
         "HTTP request",
         extra={
@@ -65,12 +66,12 @@ async def correlation_middleware(request: Request, call_next):
             "client": request.client.host if request.client else "unknown",
         }
     )
-    
+
     response = await call_next(request)
-    
+
     # Add correlation ID to response headers
     response.headers["X-Correlation-ID"] = cid
-    
+
     logger.info(
         "HTTP response",
         extra={
@@ -79,7 +80,7 @@ async def correlation_middleware(request: Request, call_next):
             "path": request.url.path,
         }
     )
-    
+
     return response
 
 
@@ -110,7 +111,7 @@ async def api_error_handler(request: Request, exc: ApiError):
     """Handle custom API errors with RFC 7807 format."""
     correlation_id = get_correlation_id()
     path = str(request.url.path)
-    
+
     logger.warning(
         f"API error: {exc.code} - {exc.message}",
         extra={
@@ -121,7 +122,7 @@ async def api_error_handler(request: Request, exc: ApiError):
             "request_path": path,
         }
     )
-    
+
     return JSONResponse(
         status_code=exc.status,
         content={
@@ -141,10 +142,10 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     """Handle FastAPI HTTPException with RFC 7807 format (for validation errors, etc.)."""
     correlation_id = get_correlation_id()
     path = str(request.url.path)
-    
+
     # Extract validation error details if available
     detail_str = exc.detail if isinstance(exc.detail, str) else "http_error"
-    
+
     logger.warning(
         f"HTTP error: {exc.status_code}",
         extra={
@@ -154,10 +155,10 @@ async def http_exception_handler(request: Request, exc: HTTPException):
             "detail": detail_str,
         }
     )
-    
+
     # For validation errors (422), provide structured format
     error_code = "validation_error" if exc.status_code == 422 else "http_error"
-    
+
     return JSONResponse(
         status_code=exc.status_code,
         content={
@@ -176,7 +177,7 @@ async def general_exception_handler(request: Request, exc: Exception):
     """Handle unhandled exceptions with generic error to client, full log server-side."""
     correlation_id = get_correlation_id()
     path = str(request.url.path)
-    
+
     # Log full details server-side
     logger.error(
         f"Unhandled exception: {type(exc).__name__}",
@@ -188,7 +189,7 @@ async def general_exception_handler(request: Request, exc: Exception):
         },
         exc_info=True,
     )
-    
+
     # Return generic error to client (never expose details)
     return JSONResponse(
         status_code=500,
@@ -208,14 +209,14 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     """Handle Pydantic validation errors with RFC 7807 format."""
     correlation_id = get_correlation_id()
     path = str(request.url.path)
-    
+
     # Extract field errors for logging
     errors_by_field = {}
     for error in exc.errors():
         field = ".".join(str(x) for x in error.get("loc", [])[1:])  # Skip 'body'
         if field:
             errors_by_field[field] = error.get("msg", "Invalid value")
-    
+
     logger.warning(
         "Validation error",
         extra={
@@ -225,7 +226,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             "fields": list(errors_by_field.keys()),
         }
     )
-    
+
     return JSONResponse(
         status_code=422,
         content={
@@ -353,7 +354,7 @@ _DB = {"items": [], "next_id": 1}
 @limiter.limit("100/minute")  # NFR-008: Health check rate limiting
 def health(request: Request):
     """Health check endpoint with rate limiting.
-    
+
     Returns correlation_id in response for tracing.
     """
     correlation_id = get_correlation_id()
@@ -369,7 +370,7 @@ def health(request: Request):
 @limiter.limit("200/minute")  # NFR-008: Task creation rate limiting
 def create_item(request: Request, item_data: ItemCreate):
     """Create a new item with validation and rate limiting.
-    
+
     Implements ADR-002 (validation) and ADR-001/ADR-003 (error handling + correlation).
     """
     correlation_id = get_correlation_id()

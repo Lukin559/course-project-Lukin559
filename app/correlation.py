@@ -11,7 +11,7 @@ correlation_id_var: contextvars.ContextVar[Optional[str]] = contextvars.ContextV
 
 def get_correlation_id() -> str:
     """Get current request's correlation ID.
-    
+
     Returns:
         The correlation ID string, or 'unknown' if not set.
     """
@@ -21,7 +21,7 @@ def get_correlation_id() -> str:
 
 def set_correlation_id(cid: str) -> None:
     """Set correlation ID for current request context.
-    
+
     Args:
         cid: The correlation ID (usually a UUID string).
     """

@@ -10,7 +10,6 @@ Tests validate:
 """
 
 from fastapi.testclient import TestClient
-import json
 
 from app.main import app
 
@@ -121,7 +120,7 @@ class TestCorrelationIdPropagation:
 
         # Response should use the same correlation ID
         assert response.headers["X-Correlation-ID"] == custom_cid
-        
+
         # Body should also include it
         body = response.json()
         assert body["correlation_id"] == custom_cid

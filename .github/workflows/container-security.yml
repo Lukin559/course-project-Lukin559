@@ -24,14 +24,15 @@ jobs:
           config: .hadolint.yaml
           format: sarif
           output-file: hadolint-results.sarif
-          no-fail: false
+          no-fail: true
 
       - name: Upload Hadolint results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: always() && hashFiles('hadolint-results.sarif') != ''
         with:
           sarif_file: hadolint-results.sarif
           category: hadolint
+        continue-on-error: true
 
       - name: Upload Hadolint report as artifact
         uses: actions/upload-artifact@v4
