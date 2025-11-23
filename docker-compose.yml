@@ -35,11 +35,13 @@ services:
     cap_add:
       - NET_BIND_SERVICE  # Only if needed for port binding
 
-    # 3. Prevent privilege escalation
+    # 3. Security hardening options
     security_opt:
       - no-new-privileges:true
-      # Use AppArmor/SELinux if available (example for AppArmor)
-      # - apparmor=docker-default
+      # AppArmor profile (requires profile loaded on host)
+      - apparmor=secdev-app
+      # Seccomp profile (custom restrictive profile)
+      - seccomp=seccomp-profile.json
 
     # 4. Read-only root filesystem (for stateless apps)
     # read_only: true

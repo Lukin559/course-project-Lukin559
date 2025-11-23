@@ -1,0 +1,77 @@
+#include <tunables/global>
+
+profile secdev-app flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+  #include <abstractions/python>
+
+  # Network access
+  network inet tcp,
+  network inet udp,
+  network inet6 tcp,
+  network inet6 udp,
+
+  # Allow Python and application execution
+  /usr/bin/python3.12 ix,
+  /usr/local/bin/python* ix,
+  /usr/local/bin/uvicorn ix,
+
+  # Application directory
+  /app/ r,
+  /app/** r,
+
+  # Python libraries
+  /usr/lib/python3.12/** r,
+  /usr/local/lib/python3.12/** r,
+
+  # Temp and runtime directories
+  /tmp/ r,
+  /tmp/** rw,
+  /run/ r,
+  /run/** rw,
+
+  # System files (read-only)
+  /etc/hosts r,
+  /etc/hostname r,
+  /etc/resolv.conf r,
+  /etc/nsswitch.conf r,
+  /etc/passwd r,
+  /etc/group r,
+  /etc/ssl/openssl.cnf r,
+  /etc/ssl/certs/ r,
+  /etc/ssl/certs/** r,
+
+  # Proc filesystem (limited)
+  /proc/sys/kernel/random/uuid r,
+  /proc/cpuinfo r,
+  /proc/meminfo r,
+  /proc/stat r,
+  /proc/uptime r,
+  /proc/loadavg r,
+
+  # Dev filesystem (minimal)
+  /dev/null rw,
+  /dev/zero rw,
+  /dev/random r,
+  /dev/urandom r,
+
+  # Deny dangerous operations
+  deny /proc/kcore r,
+  deny /proc/kmem r,
+  deny /proc/mem r,
+  deny /sys/kernel/debug/** r,
+  deny /sys/kernel/security/** r,
+
+  # Deny capability escalation
+  deny capability sys_admin,
+  deny capability sys_module,
+  deny capability sys_rawio,
+  deny capability sys_ptrace,
+  deny capability dac_override,
+  deny capability dac_read_search,
+
+  # Allow required capabilities
+  capability net_bind_service,
+  capability setuid,
+  capability setgid,
+}
+
