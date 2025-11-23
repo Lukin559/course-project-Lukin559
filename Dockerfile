@@ -6,18 +6,25 @@
 # ============= Stage 1: Builder =============
 FROM python:3.12.1-slim AS builder
 
+# Use bash with security options
+SHELL ["/bin/bash", "-o", "errexit", "-o", "nounset", "-o", "pipefail", "-c"]
+
 WORKDIR /build
 
 # Copy requirements
 COPY requirements*.txt ./
 
-# Build wheel cache (layers) 
+# Build wheel cache (layers)
+# Upgrade setuptools to 70.0.0+ to fix CVE-2024-6345
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --upgrade pip==24.0 setuptools==68.2.2 wheel==0.42.0 && \
+    pip install --upgrade pip==24.0 setuptools>=70.0.0 wheel==0.42.0 && \
     pip wheel --no-cache-dir --wheel-dir=/wheels -r requirements.txt
 
 # ============= Stage 2: Runtime =============
 FROM python:3.12.1-slim
+
+# Use bash with security options
+SHELL ["/bin/bash", "-o", "errexit", "-o", "nounset", "-o", "pipefail", "-c"]
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \

@@ -1,0 +1,203 @@
+name: Container Security Scan
+
+on:
+  push:
+    branches: [ main, feature/** ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run security scan weekly (every Monday at 9 AM)
+    - cron: '0 9 * * 1'
+
+jobs:
+  hadolint:
+    name: Lint Dockerfile with Hadolint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          config: .hadolint.yaml
+          format: sarif
+          output-file: hadolint-results.sarif
+          no-fail: false
+
+      - name: Upload Hadolint results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: hadolint-results.sarif
+          category: hadolint
+
+      - name: Upload Hadolint report as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hadolint-report
+          path: hadolint-results.sarif
+          retention-days: 30
+
+  trivy-scan:
+    name: Scan Image with Trivy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -t secdev-app:${{ github.sha }} .
+          docker tag secdev-app:${{ github.sha }} secdev-app:latest
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: secdev-app:${{ github.sha }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          exit-code: '0'  # Don't fail on vulnerabilities (report only)
+          ignore-unfixed: false
+          trivyignores: .trivyignore
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy
+
+      - name: Run Trivy in table format for readable report
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: secdev-app:${{ github.sha }}
+          format: 'table'
+          output: 'trivy-report.txt'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          trivyignores: .trivyignore
+
+      - name: Upload Trivy report as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-report
+          path: |
+            trivy-results.sarif
+            trivy-report.txt
+          retention-days: 30
+
+      - name: Check for critical vulnerabilities
+        run: |
+          echo "=== Trivy Scan Summary ==="
+          cat trivy-report.txt
+          
+          # Fail if CRITICAL vulnerabilities found (not in .trivyignore)
+          CRITICAL_COUNT=$(docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            -v $(pwd)/.trivyignore:/root/.trivyignore \
+            aquasec/trivy image --severity CRITICAL --quiet \
+            --format json secdev-app:${{ github.sha }} | jq '.Results[].Vulnerabilities | length' | awk '{s+=$1} END {print s}')
+          
+          echo "Critical vulnerabilities found: ${CRITICAL_COUNT:-0}"
+          
+          if [ "${CRITICAL_COUNT:-0}" -gt 0 ]; then
+            echo "❌ CRITICAL vulnerabilities detected! Review and update .trivyignore if acceptable."
+            exit 1
+          fi
+
+  sbom-generation:
+    name: Generate SBOM (Software Bill of Materials)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t secdev-app:${{ github.sha }} .
+
+      - name: Generate SBOM with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'image'
+          image-ref: secdev-app:${{ github.sha }}
+          format: 'cyclonedx'
+          output: 'sbom.json'
+
+      - name: Upload SBOM as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.json
+          retention-days: 90
+
+  docker-inspect:
+    name: Verify Container Security Config
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build and inspect container
+        run: |
+          docker build -t secdev-app:test .
+          
+          echo "=== Docker Image History ==="
+          docker history secdev-app:test
+          
+          echo ""
+          echo "=== Docker Image Size ==="
+          docker images secdev-app:test
+          
+          echo ""
+          echo "=== Running container for inspection ==="
+          docker run -d --name secdev-test secdev-app:test
+          
+          sleep 5
+          
+          echo ""
+          echo "=== Container User Check ==="
+          USER_CHECK=$(docker exec secdev-test whoami)
+          echo "Running as user: $USER_CHECK"
+          
+          if [ "$USER_CHECK" = "root" ]; then
+            echo "❌ FAILED: Container is running as root!"
+            exit 1
+          else
+            echo "✅ PASSED: Container is running as non-root user ($USER_CHECK)"
+          fi
+          
+          echo ""
+          echo "=== Container Security Options ==="
+          docker inspect secdev-test --format='{{json .HostConfig.SecurityOpt}}' | jq
+          
+          echo ""
+          echo "=== Container Capabilities ==="
+          docker inspect secdev-test --format='{{json .HostConfig.CapDrop}}' | jq
+          docker inspect secdev-test --format='{{json .HostConfig.CapAdd}}' | jq
+          
+          docker stop secdev-test
+          docker rm secdev-test
+
+      - name: Test with docker-compose
+        run: |
+          echo "=== Testing with docker-compose ==="
+          docker-compose up -d
+          
+          sleep 10
+          
+          echo ""
+          echo "=== Health Check Status ==="
+          docker-compose ps
+          
+          echo ""
+          echo "=== Application Health Endpoint ==="
+          curl -f http://localhost:8000/health || exit 1
+          
+          echo ""
+          echo "✅ PASSED: Application is healthy"
+          
+          docker-compose down
+
