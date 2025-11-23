@@ -7,15 +7,16 @@ ignored:
   # (We explicitly pin: python:3.12.1-slim with digest)
   - DL3006
 
+  # DL3013: Pin versions in pip
+  # (We use pinned requirements.txt and explicit version pins for setuptools)
+  - DL3013
+
   # DL3042: Avoid use of cache directory with pip
   # (We intentionally use BuildKit cache mount for build performance)
   - DL3042
 
 # Configure rules
 rules:
-  # DL3013: Pin versions in pip
-  # (We use pinned requirements.txt and explicit version pins)
-  DL3013: warning  # Not ignored, just warning level
 
   # DL3009: Delete apt-get lists after install
   # (Standard practice)
