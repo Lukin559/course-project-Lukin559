@@ -38,10 +38,13 @@ services:
     # 3. Security hardening options
     security_opt:
       - no-new-privileges:true
-      # AppArmor profile (requires profile loaded on host)
-      - apparmor=secdev-app
-      # Seccomp profile (custom restrictive profile)
-      - seccomp=seccomp-profile.json
+      # AppArmor: Available in apparmor-profile (requires Linux + profile loaded)
+      # To enable: sudo bash scripts/load-security-profiles.sh && uncomment below
+      # - apparmor=secdev-app
+      # Seccomp: Available in seccomp-profile.json (Docker 20.10+)
+      # To enable: uncomment below line
+      # - seccomp=seccomp-profile.json
+      # Note: Docker uses default seccomp profile if not specified
 
     # 4. Read-only root filesystem (for stateless apps)
     # read_only: true

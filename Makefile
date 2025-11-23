@@ -1,4 +1,4 @@
-.PHONY: help build run stop logs shell test-container scan lint-docker sbom inspect history reports clean ci
+.PHONY: help build run stop logs shell test-container scan lint-docker sbom inspect history reports load-profiles clean ci
 
 IMAGE_NAME := secdev-app
 CONTAINER_NAME := secdev-app
@@ -18,6 +18,7 @@ help:
 	@echo "make inspect        - Inspect container security config"
 	@echo "make history        - Show image layers and size optimization"
 	@echo "make reports        - Generate all security reports (lint + scan + sbom)"
+	@echo "make load-profiles  - Load AppArmor/seccomp security profiles (requires sudo)"
 	@echo "make clean          - Remove image and containers"
 	@echo "make ci             - Run full CI pipeline"
 
