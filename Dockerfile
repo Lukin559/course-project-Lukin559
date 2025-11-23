@@ -53,13 +53,13 @@ USER app
 
 # Health check (verify service is responding)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-    CMD python -c "import httpx; httpx.get('http://localhost:8000/health', timeout=2)" || exit 1
+    CMD /usr/local/bin/python -c "import httpx; httpx.get('http://localhost:8000/health', timeout=2)" || exit 1
 
 # Explicit port
 EXPOSE 8000
 
 # Explicit command (python as entrypoint via CMD)
-CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["/usr/local/bin/python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 # Labels for metadata
 LABEL maintainer="Security Development Course" \

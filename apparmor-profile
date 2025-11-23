@@ -14,14 +14,19 @@ profile secdev-app flags=(attach_disconnected,mediate_deleted) {
   /usr/bin/python3.12 ix,
   /usr/local/bin/python* ix,
   /usr/local/bin/uvicorn ix,
+  /usr/bin/python* ix,
 
   # Application directory
   /app/ r,
   /app/** r,
 
-  # Python libraries
+  # Python libraries and shared objects
   /usr/lib/python3.12/** r,
   /usr/local/lib/python3.12/** r,
+  /usr/lib/** r,
+  /usr/local/lib/** r,
+  /lib/** r,
+  /lib64/** r,
 
   # Temp and runtime directories
   /tmp/ r,
