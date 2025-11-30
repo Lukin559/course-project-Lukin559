@@ -1,49 +1,281 @@
 name: CI
+
 on:
-  pull_request:
   push:
+    branches: [main, p08-cicd-minimal]
+  pull_request:
     branches: [main]
+
 permissions:
   contents: read
+
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+env:
+  # Переменные окружения для всего workflow
+  PYTHONDONTWRITEBYTECODE: "1"
+  PYTHONUNBUFFERED: "1"
+  PIP_NO_CACHE_DIR: "off"
+  PIP_DISABLE_PIP_VERSION_CHECK: "on"
 
-      - uses: actions/setup-python@v5
+jobs:
+  # ============================================
+  # C1: Сборка и тесты с матрицей Python/OS
+  # ============================================
+  test:
+    name: Test (Python ${{ matrix.python-version }} / ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-22.04]
+        python-version: ["3.11", "3.12"]
+        exclude:
+          # Исключаем одну комбинацию для ускорения
+          - os: ubuntu-22.04
+            python-version: "3.12"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        timeout-minutes: 2
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        timeout-minutes: 3
         with:
-          python-version: "3.11"
-          cache: "pip"
+          python-version: ${{ matrix.python-version }}
+
+      # C2: Оптимизированный кэш с ключами по pyproject.toml и requirements
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.local/lib/python${{ matrix.python-version }}/site-packages
+          key: ${{ runner.os }}-py${{ matrix.python-version }}-pip-${{ hashFiles('**/requirements*.txt', '**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-py${{ matrix.python-version }}-pip-
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        timeout-minutes: 5
+        run: |
+          python -m pip install --upgrade pip wheel setuptools
+          pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run linters (parallel)
+        timeout-minutes: 3
+        run: |
+          echo "::group::Ruff check"
+          ruff check --output-format=github .
+          echo "::endgroup::"
+          
+          echo "::group::Black check"
+          black --check --diff .
+          echo "::endgroup::"
+          
+          echo "::group::isort check"
+          isort --check-only --diff .
+          echo "::endgroup::"
+
+      - name: Run tests with coverage
+        timeout-minutes: 5
+        run: |
+          mkdir -p reports
+          pytest -q \
+            --maxfail=3 \
+            --disable-warnings \
+            --junitxml=reports/junit-${{ matrix.os }}-py${{ matrix.python-version }}.xml \
+            --cov=app \
+            --cov-report=xml:reports/coverage-${{ matrix.os }}-py${{ matrix.python-version }}.xml \
+            --cov-report=html:reports/htmlcov-${{ matrix.os }}-py${{ matrix.python-version }} \
+            --cov-report=term-missing
+
+      # C4: Артефакты - отчёты тестов и coverage
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-${{ matrix.os }}-py${{ matrix.python-version }}
+          path: reports/
+          retention-days: 14
+
+  # ============================================
+  # Security scan job (параллельно с тестами)
+  # ============================================
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        timeout-minutes: 2
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-security-pip-${{ hashFiles('**/requirements*.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-security-pip-
+
+      - name: Install security tools
+        timeout-minutes: 3
+        run: |
+          pip install --upgrade pip
+          pip install bandit safety
+
+      - name: Run Bandit security scan
+        timeout-minutes: 3
+        run: |
+          mkdir -p reports
+          bandit -r app/ -f json -o reports/bandit-report.json || true
+          bandit -r app/ -f txt -o reports/bandit-report.txt || true
+          echo "### Bandit Security Report" >> $GITHUB_STEP_SUMMARY
+          cat reports/bandit-report.txt >> $GITHUB_STEP_SUMMARY || true
+
+      - name: Upload security reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: reports/
+          retention-days: 14
+
+  # ============================================
+  # C5: CD/Deployment (эмуляция staging)
+  # ============================================
+  deploy-staging:
+    name: Deploy to Staging (dry-run)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [test, security]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/p08-cicd-minimal'
+    
+    # C3: Пример использования секретов для разных окружений
+    environment:
+      name: staging
+      url: https://staging.example.com
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        timeout-minutes: 2
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-deploy-pip-${{ hashFiles('**/requirements*.txt') }}
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt -r requirements-dev.txt
+          pip install --upgrade pip
+          pip install -r requirements.txt
 
-      - name: Lint & Format
+      # C3: Демонстрация работы с секретами (маскируются автоматически)
+      - name: Validate deployment config
+        timeout-minutes: 2
+        env:
+          # Секреты из GitHub Secrets (если настроены)
+          DEPLOY_ENV: staging
+          # DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          # JWT_SECRET: ${{ secrets.STAGING_JWT_SECRET }}
         run: |
-          ruff check --output-format=github .
-          black --check .
-          isort --check-only .
+          echo "::notice::Validating deployment configuration for $DEPLOY_ENV environment"
+          echo "### Deployment Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- Environment: $DEPLOY_ENV" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
 
-      - name: Tests
-        run: pytest -q --cov=app --cov-report=xml
-
-      - name: Pre-commit (all files)
-        run: pre-commit run --all-files
-
-      - name: Security check
+      - name: Build application (dry-run)
+        timeout-minutes: 3
         run: |
-          pip install bandit
-          bandit -r app/ -f json -o bandit-report.json || true
+          echo "::group::Building application package"
+          # Эмуляция сборки - проверяем что приложение импортируется
+          python -c "from app.main import app; print('App imported successfully')"
+          
+          # Создаём манифест деплоя
+          mkdir -p deploy
+          cat > deploy/manifest.json << EOF
+          {
+            "version": "${{ github.sha }}",
+            "branch": "${{ github.ref_name }}",
+            "environment": "staging",
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "python_version": "3.12"
+          }
+          EOF
+          cat deploy/manifest.json
+          echo "::endgroup::"
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+      - name: Deploy to staging (dry-run)
+        timeout-minutes: 2
+        run: |
+          echo "::notice::DRY-RUN: Would deploy to staging environment"
+          echo ""
+          echo "=== DEPLOYMENT SIMULATION ==="
+          echo "Target: staging.example.com"
+          echo "Version: ${{ github.sha }}"
+          echo "Status: DRY-RUN SUCCESS"
+          echo ""
+          echo "### Staging Deployment (dry-run)" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Deployment simulation successful" >> $GITHUB_STEP_SUMMARY
+          echo "- Would deploy commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload deployment artifacts
+        uses: actions/upload-artifact@v4
         with:
-          file: ./coverage.xml
-          fail_ci_if_error: false
+          name: deployment-manifest
+          path: deploy/
+          retention-days: 7
+
+  # ============================================
+  # Финальный статус (все проверки)
+  # ============================================
+  ci-status:
+    name: CI Status
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [test, security]
+    if: always()
+
+    steps:
+      - name: Check CI status
+        run: |
+          echo "### CI Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.test.result }}" == "success" ]; then
+            echo "✅ Tests: Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Tests: ${{ needs.test.result }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ needs.security.result }}" == "success" ]; then
+            echo "✅ Security: Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Security: ${{ needs.security.result }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Fail if tests failed
+          if [ "${{ needs.test.result }}" != "success" ]; then
+            echo "::error::Test job failed"
+            exit 1
+          fi

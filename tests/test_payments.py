@@ -4,9 +4,10 @@ Control: Decimal/UTC validation
 Tests: Positive, negative, boundary conditions
 """
 
-import pytest
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from datetime import datetime, timezone, timedelta
+
+import pytest
 from pydantic import ValidationError
 
 from app.payments import Payment, parse_payment_json
@@ -192,7 +193,10 @@ class TestPaymentJsonParsing:
 
     def test_extra_fields_rejected(self):
         """NEGATIVE: Extra fields rejected (model_config forbid)."""
-        json_str = '{"amount": "100.00", "currency": "USD", "occurred_at": "2025-01-15T10:30:45Z", "extra_field": "value"}'
+        json_str = (
+            '{"amount": "100.00", "currency": "USD", '
+            '"occurred_at": "2025-01-15T10:30:45Z", "extra_field": "value"}'
+        )
         with pytest.raises(ValidationError) as exc_info:
             parse_payment_json(json_str)
         assert "extra_field" in str(exc_info.value).lower()
@@ -248,4 +252,3 @@ class TestPaymentBoundaryConditions:
                 description="x" * 501,
                 occurred_at=datetime.now(timezone.utc),
             )
-

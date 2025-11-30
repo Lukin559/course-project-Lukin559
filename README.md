@@ -1,5 +1,8 @@
 # Task tracker
 
+![CI](https://github.com/Lukin559/course-project-Lukin559/actions/workflows/ci.yml/badge.svg)
+![Container Security](https://github.com/Lukin559/course-project-Lukin559/actions/workflows/container-security.yml/badge.svg)
+
 ## Быстрый старт
 ```bash
 python -m venv .venv

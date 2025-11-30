@@ -184,10 +184,7 @@ class TestErrorSecurity:
         # Should not contain database keywords
         assert "sqlite" not in body.lower()
         assert "postgres" not in body.lower()
-        assert (
-            "column" not in body.lower()
-            or "column" in response.json()["detail"].lower()
-        )
+        assert "column" not in body.lower() or "column" in response.json()["detail"].lower()
         assert "table" not in body.lower()
 
     def test_no_stack_trace_in_errors(self):
@@ -196,10 +193,7 @@ class TestErrorSecurity:
         body = str(response.json())
 
         assert "traceback" not in body.lower()
-        assert (
-            "file" not in body.lower()
-            or "file" in response.json().get("detail", "").lower()
-        )
+        assert "file" not in body.lower() or "file" in response.json().get("detail", "").lower()
         assert ".py" not in body.lower()
 
     def test_validation_error_masks_field_types(self):

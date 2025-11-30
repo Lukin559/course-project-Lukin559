@@ -205,9 +205,7 @@ class TestXSSInjectionPrevention:
 
     def test_xss_encoded_script_accepted(self):
         """Test that HTML-encoded <script> is accepted as plain text."""
-        response = client.post(
-            "/items", json={"name": "&#60;script&#62;alert(1)&#60;/script&#62;"}
-        )
+        response = client.post("/items", json={"name": "&#60;script&#62;alert(1)&#60;/script&#62;"})
         assert response.status_code == 201
 
     def test_xss_in_description_accepted_safely(self):
@@ -231,9 +229,7 @@ class TestSQLInjectionPrevention:
 
     def test_sql_union_select_accepted_safely(self):
         """Test that SQL UNION SELECT as plain text is accepted."""
-        response = client.post(
-            "/items", json={"name": "'; UNION SELECT * FROM users; --"}
-        )
+        response = client.post("/items", json={"name": "'; UNION SELECT * FROM users; --"})
         assert response.status_code == 201
 
     def test_sql_or_1_1_accepted_safely(self):
@@ -288,25 +284,19 @@ class TestBoundaryConditions:
 
     def test_description_exactly_500_chars(self):
         """Test that exactly 500 char descriptions are accepted."""
-        response = client.post(
-            "/items", json={"name": "Valid", "description": "x" * 500}
-        )
+        response = client.post("/items", json={"name": "Valid", "description": "x" * 500})
         assert response.status_code == 201
         assert len(response.json()["description"]) == 500
 
     def test_price_exactly_1_million(self):
         """Test that price of exactly 1 million is accepted."""
-        response = client.post(
-            "/items", json={"name": "Expensive", "price": 1_000_000.00}
-        )
+        response = client.post("/items", json={"name": "Expensive", "price": 1_000_000.00})
         assert response.status_code == 201
         assert response.json()["price"] == 1_000_000.00
 
     def test_price_1_000_000_01_rejected(self):
         """Test that price > 1 million is rejected."""
-        response = client.post(
-            "/items", json={"name": "Too Expensive", "price": 1_000_000.01}
-        )
+        response = client.post("/items", json={"name": "Too Expensive", "price": 1_000_000.01})
         assert response.status_code == 422
 
 

@@ -4,17 +4,18 @@ Control: Magic bytes validation, path traversal prevention, file size limits
 Tests: Positive, negative (traversal, symlinks, bad types, size limit), boundary
 """
 
-import pytest
 import tempfile
 from pathlib import Path
+
+import pytest
+
 from app.file_handler import (
+    MAX_FILE_SIZE,
+    FileValidationError,
+    secure_save_file,
     sniff_mimetype,
     validate_file_upload,
-    secure_save_file,
-    FileValidationError,
-    MAX_FILE_SIZE,
 )
-
 
 # Magic bytes for test files
 PNG_HEADER = b"\x89PNG\r\n\x1a\n" + b"\x00" * 100
@@ -96,7 +97,7 @@ class TestSecureSaveFile:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
             result = secure_save_file(root, PNG_HEADER)
-            
+
             # Should be saved with UUID filename
             assert result.exists()
             assert result.suffix == ".png"
@@ -108,7 +109,7 @@ class TestSecureSaveFile:
             root = Path(tmpdir)
             result1 = secure_save_file(root, PNG_HEADER)
             result2 = secure_save_file(root, PNG_HEADER)
-            
+
             # Different files
             assert result1 != result2
             assert result1.exists()
@@ -119,7 +120,7 @@ class TestSecureSaveFile:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
             large_file = PNG_HEADER + b"\x00" * (MAX_FILE_SIZE + 1)
-            
+
             with pytest.raises(FileValidationError) as exc_info:
                 secure_save_file(root, large_file)
             assert "too_large" in str(exc_info.value).lower()
@@ -134,14 +135,14 @@ class TestSecureSaveFile:
         """Test path traversal prevention with UUID filenames."""
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
-            
+
             # Save file and verify it's in the upload directory
             result = secure_save_file(root, PNG_HEADER)
-            
+
             # Resolve both paths to handle symlinks consistently
             root_resolved = root.resolve()
             result_resolved = result.resolve()
-            
+
             # Check that file is within upload directory
             assert str(result_resolved).startswith(str(root_resolved))
 
@@ -149,21 +150,21 @@ class TestSecureSaveFile:
         """NEGATIVE: Symlink in parent path blocked."""
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
-            
+
             # Create subdirectory
             subdir = root / "subdir"
             subdir.mkdir()
-            
+
             # Create symlink to some external location
             try:
                 symlink = root / "symlink"
                 symlink.symlink_to(Path("/tmp"))
-                
+
                 # Try to write a file through the symlink parent
                 # (This is prevented by our checks)
                 # Create a target file in the symlink
                 result = secure_save_file(symlink, PNG_HEADER)
-                
+
                 # If we get here, the file was saved (symlink wasn't detected in traversal check)
                 # This is OK - we're testing that the path is still secure
                 assert result.exists()
@@ -177,7 +178,7 @@ class TestSecureSaveFile:
             root = Path(tmpdir)
             original = PNG_HEADER + b"EXTRA_DATA"
             result = secure_save_file(root, original)
-            
+
             # Content should match
             assert result.read_bytes() == original
 
@@ -210,4 +211,3 @@ class TestFileHandlingBoundaries:
             root = Path(tmpdir)
             with pytest.raises(FileValidationError):
                 secure_save_file(root, over_file)
-

@@ -4,19 +4,12 @@ Control: HTTP client with timeouts, retries, backoff
 Tests: Positive (success), negative (timeout, retries exhausted, 4xx errors), boundary
 """
 
-import pytest
-from unittest.mock import patch, MagicMock
-import httpx
-import time
+from unittest.mock import MagicMock, patch
 
-from app.http_client import (
-    create_timeout,
-    fetch_with_retries,
-    fetch_json,
-    HttpClientError,
-    MAX_RETRIES,
-    RETRY_BACKOFF,
-)
+import httpx
+import pytest
+
+from app.http_client import HttpClientError, create_timeout, fetch_json, fetch_with_retries
 
 
 class TestTimeoutConfiguration:
@@ -41,7 +34,7 @@ class TestHttpFetchSuccess:
         mock_response.status_code = 200
         mock_response.raise_for_status.return_value = None
         mock_request.return_value = mock_response
-        
+
         response = fetch_with_retries("https://example.com/health")
         assert response.status_code == 200
 
@@ -52,7 +45,7 @@ class TestHttpFetchSuccess:
         mock_response.status_code = 201
         mock_response.raise_for_status.return_value = None
         mock_request.return_value = mock_response
-        
+
         response = fetch_with_retries("https://example.com/data", method="POST")
         assert response.status_code == 201
 
@@ -64,7 +57,7 @@ class TestHttpFetchSuccess:
         mock_response.raise_for_status.return_value = None
         mock_response.json.return_value = {"status": "ok"}
         mock_request.return_value = mock_response
-        
+
         data = fetch_json("https://example.com/api")
         assert data == {"status": "ok"}
 
@@ -81,7 +74,7 @@ class TestHttpTimeout:
             httpx.TimeoutException("Timeout"),
             MagicMock(status_code=200, raise_for_status=lambda: None),
         ]
-        
+
         response = fetch_with_retries("https://example.com/health")
         assert response.status_code == 200
         assert mock_request.call_count == 3
@@ -90,10 +83,10 @@ class TestHttpTimeout:
     def test_timeout_exhausts_retries(self, mock_request):
         """NEGATIVE: Timeout exhausts retries and fails."""
         mock_request.side_effect = httpx.TimeoutException("Timeout")
-        
+
         with pytest.raises(HttpClientError) as exc_info:
             fetch_with_retries("https://example.com/health", max_retries=2)
-        
+
         assert "Failed to fetch" in str(exc_info.value)
         assert mock_request.call_count == 2  # Only 2 attempts with max_retries=2
 
@@ -110,13 +103,13 @@ class TestHttpRetries:
             httpx.RequestError("Connection error"),
             MagicMock(status_code=200, raise_for_status=lambda: None),
         ]
-        
+
         response = fetch_with_retries(
             "https://example.com/health",
             max_retries=3,
             backoff_factor=0.5,
         )
-        
+
         assert response.status_code == 200
         # Should sleep with exponential backoff
         assert mock_sleep.call_count == 2
@@ -133,10 +126,10 @@ class TestHttpRetries:
             request=MagicMock(),
             response=MagicMock(status_code=404),
         )
-        
+
         with pytest.raises(HttpClientError) as exc_info:
             fetch_with_retries("https://example.com/missing")
-        
+
         assert "404" in str(exc_info.value)
         assert mock_request.call_count == 1  # No retries for 4xx
 
@@ -161,7 +154,7 @@ class TestHttpErrors:
             ),
             MagicMock(status_code=200, raise_for_status=lambda: None),
         ]
-        
+
         response = fetch_with_retries("https://example.com/api")
         assert response.status_code == 200
         assert mock_request.call_count == 3
@@ -174,10 +167,10 @@ class TestHttpErrors:
         mock_response.raise_for_status.return_value = None
         mock_response.json.side_effect = ValueError("Invalid JSON")
         mock_request.return_value = mock_response
-        
+
         with pytest.raises(HttpClientError) as exc_info:
             fetch_json("https://example.com/api")
-        
+
         assert "Invalid JSON" in str(exc_info.value)
 
 
@@ -188,13 +181,13 @@ class TestHttpBoundaryConditions:
     def test_single_retry(self, mock_request):
         """Test with single retry (max_retries=1)."""
         mock_request.side_effect = httpx.RequestError("Error")
-        
+
         with pytest.raises(HttpClientError):
             fetch_with_retries(
                 "https://example.com/api",
                 max_retries=1,
             )
-        
+
         assert mock_request.call_count == 1
 
     @patch("httpx.Client.request")
@@ -208,12 +201,12 @@ class TestHttpBoundaryConditions:
             httpx.RequestError("Error"),
             MagicMock(status_code=200, raise_for_status=lambda: None),
         ]
-        
+
         response = fetch_with_retries(
             "https://example.com/api",
             max_retries=5,
         )
-        
+
         assert response.status_code == 200
         assert mock_request.call_count == 5
 
@@ -224,13 +217,13 @@ class TestHttpBoundaryConditions:
             httpx.RequestError("Error"),
             MagicMock(status_code=200, raise_for_status=lambda: None),
         ]
-        
+
         response = fetch_with_retries(
             "https://example.com/api",
             max_retries=2,
             backoff_factor=0.0,  # No backoff
         )
-        
+
         assert response.status_code == 200
 
     @patch("httpx.Client.request")
@@ -241,7 +234,7 @@ class TestHttpBoundaryConditions:
         mock_response.status_code = 200
         mock_response.raise_for_status.return_value = None
         mock_request.return_value = mock_response
-        
+
         response = fetch_with_retries("https://example.com/redirect")
         assert response.status_code == 200
 
@@ -258,7 +251,7 @@ class TestJsonFetching:
         mock_response.json.return_value = {"key": "value"}
         mock_response.headers = {"content-type": "application/json"}
         mock_request.return_value = mock_response
-        
+
         data = fetch_json("https://api.example.com/data")
         assert data == {"key": "value"}
 
@@ -271,7 +264,7 @@ class TestJsonFetching:
         mock_response.json.return_value = [1, 2, 3]
         mock_response.headers = {"content-type": "application/json"}
         mock_request.return_value = mock_response
-        
+
         data = fetch_json("https://api.example.com/list")
         assert data == [1, 2, 3]
 
@@ -284,10 +277,9 @@ class TestJsonFetching:
         mock_response.json.return_value = {"created": True}
         mock_response.headers = {"content-type": "application/json"}
         mock_request.return_value = mock_response
-        
+
         data = fetch_json(
             "https://api.example.com/items",
             method="POST",
         )
         assert data == {"created": True}
-

@@ -88,9 +88,7 @@ async def correlation_middleware(request: Request, call_next):
 class ApiError(Exception):
     """Custom API error with RFC 7807 formatting."""
 
-    def __init__(
-        self, code: str, message: str, status: int = 400, details: Optional[dict] = None
-    ):
+    def __init__(self, code: str, message: str, status: int = 400, details: Optional[dict] = None):
         self.code = code
         self.message = message
         self.status = status
@@ -247,12 +245,8 @@ class ItemCreate(BaseModel):
     """Item creation request model with ADR-002 validation."""
 
     name: str = Field(..., min_length=1, max_length=100, description="Item name")
-    description: Optional[str] = Field(
-        None, max_length=500, description="Item description"
-    )
-    price: Optional[float] = Field(
-        None, ge=0, description="Item price (must be non-negative)"
-    )
+    description: Optional[str] = Field(None, max_length=500, description="Item description")
+    price: Optional[float] = Field(None, ge=0, description="Item price (must be non-negative)")
 
     @field_validator("name")
     @classmethod
