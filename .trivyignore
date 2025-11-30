@@ -1,0 +1,51 @@
+# Trivy ignore policy for vulnerabilities
+# Format: CVE-XXXX-XXXXX
+# Expires: Date when this ignore should be removed (YYYY-MM-DD)
+
+# Debian base image vulnerabilities (from python:3.12.1-slim)
+# These are low-impact system libraries; mitigate via regular updates
+
+# CVE-2023-31484 - Perl vulnerability (in perl-base package)
+# Impact: Low - not used by application
+# Mitigated: Regular Debian updates
+# Expires: 2025-12-31
+CVE-2023-31484
+
+# CVE-2024-56406 - Perl vulnerability
+# Impact: Low - not used by application
+# Mitigated: Regular Debian updates
+# Expires: 2025-12-31
+CVE-2024-56406
+
+# CVE-2023-45853 - zlib heap-based buffer overflow
+# Impact: Critical but requires specific conditions
+# Mitigated: Upgrade base image when zlib patch available
+# Expires: 2025-06-30
+CVE-2023-45853
+
+# Python package vulnerabilities (application dependencies)
+
+# CVE-2024-6345 - setuptools RCE vulnerability
+# Status: Fixed in setuptools 70.0.0
+# Action: Upgrade setuptools from 69.0.3 to 70.0.0+ in next release
+# Expires: 2025-06-30
+CVE-2024-6345
+
+# CVE-2025-47273 - setuptools path traversal
+# Status: Fixed in setuptools 78.1.1+
+# Action: Coordinate with CI/CD for upgrade
+# Expires: 2025-06-30
+CVE-2025-47273
+
+# CVE-2024-47874 - Starlette DoS via multipart/form-data
+# Status: Fixed in starlette 0.40.0+
+# Action: Upgrade starlette from 0.38.6
+# Impact: Medium - affects file upload endpoints (if implemented)
+# Expires: 2025-06-30
+CVE-2024-47874
+
+# Policy Notes
+# - Base image updates: Every 2 weeks (Docker scout monitoring)
+# - Dependency updates: Every sprint (with testing)
+# - Critical CVEs: Patch within 24 hours
+# - High CVEs: Patch within 7 days

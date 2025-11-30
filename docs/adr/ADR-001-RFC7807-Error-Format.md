@@ -14,9 +14,9 @@ The Task Tracker API currently returns errors in heterogeneous formats (custom J
 
 ### Why This Matters for Your Domain
 Task Tracker manages user tasks that may contain sensitive business data. Errors revealing:
-- Exact field names → XSS/injection vectors identified  
-- Database stack traces → Infrastructure enumeration  
-- Validation logic → Brute-force optimization  
+- Exact field names → XSS/injection vectors identified
+- Database stack traces → Infrastructure enumeration
+- Validation logic → Brute-force optimization
 
 ### Regulatory/Risk Link
 - **NFR-007**: "No sensitive task data in logs" — we must mask error details

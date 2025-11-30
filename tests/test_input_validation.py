@@ -205,17 +205,16 @@ class TestXSSInjectionPrevention:
 
     def test_xss_encoded_script_accepted(self):
         """Test that HTML-encoded <script> is accepted as plain text."""
-        response = client.post("/items", json={"name": "&#60;script&#62;alert(1)&#60;/script&#62;"})
+        response = client.post(
+            "/items", json={"name": "&#60;script&#62;alert(1)&#60;/script&#62;"}
+        )
         assert response.status_code == 201
 
     def test_xss_in_description_accepted_safely(self):
         """Test that XSS-like patterns in description are accepted as plain text."""
         response = client.post(
             "/items",
-            json={
-                "name": "Valid",
-                "description": "<img src=x onerror=alert(1)>"
-            }
+            json={"name": "Valid", "description": "<img src=x onerror=alert(1)>"},
         )
         # Accepted as plain text (no server-side interpretation)
         assert response.status_code == 201
@@ -232,7 +231,9 @@ class TestSQLInjectionPrevention:
 
     def test_sql_union_select_accepted_safely(self):
         """Test that SQL UNION SELECT as plain text is accepted."""
-        response = client.post("/items", json={"name": "'; UNION SELECT * FROM users; --"})
+        response = client.post(
+            "/items", json={"name": "'; UNION SELECT * FROM users; --"}
+        )
         assert response.status_code == 201
 
     def test_sql_or_1_1_accepted_safely(self):
@@ -253,7 +254,7 @@ class TestUnicodeAndEncodingAttacks:
     def test_null_bytes_handled(self):
         """Test that null bytes are accepted as plain text."""
         response = client.post("/items", json={"name": "Name\x00Injection"})
-        # Accepted as plain text  
+        # Accepted as plain text
         assert response.status_code == 201
         # Null byte is preserved in string
         assert "\x00" in response.json()["name"]
@@ -288,8 +289,7 @@ class TestBoundaryConditions:
     def test_description_exactly_500_chars(self):
         """Test that exactly 500 char descriptions are accepted."""
         response = client.post(
-            "/items",
-            json={"name": "Valid", "description": "x" * 500}
+            "/items", json={"name": "Valid", "description": "x" * 500}
         )
         assert response.status_code == 201
         assert len(response.json()["description"]) == 500
@@ -297,8 +297,7 @@ class TestBoundaryConditions:
     def test_price_exactly_1_million(self):
         """Test that price of exactly 1 million is accepted."""
         response = client.post(
-            "/items",
-            json={"name": "Expensive", "price": 1_000_000.00}
+            "/items", json={"name": "Expensive", "price": 1_000_000.00}
         )
         assert response.status_code == 201
         assert response.json()["price"] == 1_000_000.00
@@ -306,8 +305,7 @@ class TestBoundaryConditions:
     def test_price_1_000_000_01_rejected(self):
         """Test that price > 1 million is rejected."""
         response = client.post(
-            "/items",
-            json={"name": "Too Expensive", "price": 1_000_000.01}
+            "/items", json={"name": "Too Expensive", "price": 1_000_000.01}
         )
         assert response.status_code == 422
 
@@ -323,9 +321,13 @@ class TestValidationErrorMessages:
         body = response.json()
         assert "detail" in body
         detail = body["detail"]
-        
+
         # Should be generic, not expose exact constraints
-        assert "invalid" in detail.lower() or "validation" in detail.lower() or "parameters" in detail.lower()
+        assert (
+            "invalid" in detail.lower()
+            or "validation" in detail.lower()
+            or "parameters" in detail.lower()
+        )
 
     def test_long_name_error_message(self):
         """Test error message for long name doesn't expose exact constraints."""
@@ -333,10 +335,14 @@ class TestValidationErrorMessages:
         assert response.status_code == 422
         body = response.json()
         detail = body["detail"]
-        
+
         # Should be generic, not expose "max 100" constraint
         assert "max" not in detail.lower() or "100" not in detail
-        assert "invalid" in detail.lower() or "validation" in detail.lower() or "parameters" in detail.lower()
+        assert (
+            "invalid" in detail.lower()
+            or "validation" in detail.lower()
+            or "parameters" in detail.lower()
+        )
 
     def test_invalid_price_error_message(self):
         """Test error message for invalid price."""
@@ -344,6 +350,10 @@ class TestValidationErrorMessages:
         assert response.status_code == 422
         body = response.json()
         detail = body["detail"]
-        
+
         # Should be generic
-        assert "invalid" in detail.lower() or "validation" in detail.lower() or "parameters" in detail.lower()
+        assert (
+            "invalid" in detail.lower()
+            or "validation" in detail.lower()
+            or "parameters" in detail.lower()
+        )

@@ -10,7 +10,6 @@ Tests validate:
 """
 
 from fastapi.testclient import TestClient
-import json
 
 from app.main import app
 
@@ -113,15 +112,12 @@ class TestCorrelationIdPropagation:
     def test_correlation_id_header_propagation(self):
         """Test that client-provided correlation_id is preserved."""
         custom_cid = "test-correlation-id-12345"
-        response = client.get(
-            "/health",
-            headers={"X-Correlation-ID": custom_cid}
-        )
+        response = client.get("/health", headers={"X-Correlation-ID": custom_cid})
         assert response.status_code == 200
 
         # Response should use the same correlation ID
         assert response.headers["X-Correlation-ID"] == custom_cid
-        
+
         # Body should also include it
         body = response.json()
         assert body["correlation_id"] == custom_cid
@@ -170,10 +166,7 @@ class TestErrorCodesAndStatuses:
 
     def test_success_includes_correlation_id(self):
         """Test that successful item creation includes correlation_id."""
-        response = client.post(
-            "/items",
-            json={"name": "Test Item", "price": 10.99}
-        )
+        response = client.post("/items", json={"name": "Test Item", "price": 10.99})
         assert response.status_code == 201
 
         # Response body should include correlation_id in header
@@ -191,7 +184,10 @@ class TestErrorSecurity:
         # Should not contain database keywords
         assert "sqlite" not in body.lower()
         assert "postgres" not in body.lower()
-        assert "column" not in body.lower() or "column" in response.json()["detail"].lower()
+        assert (
+            "column" not in body.lower()
+            or "column" in response.json()["detail"].lower()
+        )
         assert "table" not in body.lower()
 
     def test_no_stack_trace_in_errors(self):
@@ -200,7 +196,10 @@ class TestErrorSecurity:
         body = str(response.json())
 
         assert "traceback" not in body.lower()
-        assert "file" not in body.lower() or "file" in response.json().get("detail", "").lower()
+        assert (
+            "file" not in body.lower()
+            or "file" in response.json().get("detail", "").lower()
+        )
         assert ".py" not in body.lower()
 
     def test_validation_error_masks_field_types(self):

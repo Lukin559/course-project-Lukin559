@@ -55,29 +55,29 @@ class ValidationError(Exception):
 
 class InputValidator:
     """Centralized input validation for all user inputs."""
-    
+
     @staticmethod
     def canonicalize_name(raw_name: str) -> str:
         """Canonicalize task name: trim, collapse spaces, validate."""
         if not raw_name or not raw_name.strip():
             raise ValidationError("name cannot be empty or only whitespace")
-        
+
         canonical = " ".join(raw_name.split())  # collapse spaces
-        
+
         if len(canonical) > 100:
             raise ValidationError("name too long (max 100 chars after normalization)")
-        
+
         return canonical
-    
+
     @staticmethod
     def validate_price(price: Optional[float]) -> Optional[float]:
         """Validate price: must be positive, reasonable range."""
         if price is None:
             return None
-        
+
         if price < 0.01 or price > 1_000_000:
             raise ValidationError("price must be between 0.01 and 1,000,000")
-        
+
         return round(price, 2)  # prevent float rounding errors
 ```
 

@@ -9,8 +9,14 @@ build/
 .env
 .pytest_cache/
 .coverage
+
 # IDE
 .vscode/
 .idea/
+
 # OS
 .DS_Store
+
+# Docker & Security Reports (generated artifacts)
+reports/
+*.log

@@ -1,0 +1,31 @@
+# Hadolint configuration for Dockerfile linting
+# Security and best practices for container images
+
+# Ignored rules
+ignored:
+  # DL3006: Always tag the version of an image explicitly
+  # (We explicitly pin: python:3.12.1-slim with digest)
+  - DL3006
+
+  # DL3013: Pin versions in pip
+  # (We use pinned requirements.txt and explicit version pins for setuptools)
+  - DL3013
+
+  # DL3042: Avoid use of cache directory with pip
+  # (We intentionally use BuildKit cache mount for build performance)
+  - DL3042
+
+# Configure rules
+rules:
+
+  # DL3009: Delete apt-get lists after install
+  # (Standard practice)
+  DL3009: error
+
+# Trusted registries
+trustedRegistries:
+  - docker.io
+  - ghcr.io
+
+# Strict mode (enforce security checks)
+strict: true
