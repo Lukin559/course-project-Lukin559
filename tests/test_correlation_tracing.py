@@ -154,9 +154,7 @@ class TestCorrelationIdAuditTrail:
 
         # Retrieve item with different correlation ID
         different_cid = "different-" + "b" * 25
-        get_response = client.get(
-            f"/items/{item_id}", headers={"X-Correlation-ID": different_cid}
-        )
+        get_response = client.get(f"/items/{item_id}", headers={"X-Correlation-ID": different_cid})
         assert get_response.status_code == 200
         # Different request should have different correlation ID
         assert get_response.headers["X-Correlation-ID"] == different_cid
@@ -178,9 +176,7 @@ class TestCorrelationIdAuditTrail:
         item_id = create_response.json()["id"]
 
         # Get
-        get_response = client.get(
-            f"/items/{item_id}", headers={"X-Correlation-ID": audit_cid}
-        )
+        get_response = client.get(f"/items/{item_id}", headers={"X-Correlation-ID": audit_cid})
         responses.append(get_response)
 
         # All operations should have same correlation ID for audit trail linking
@@ -237,9 +233,7 @@ class TestCorrelationIdMultipleErrorTypes:
     def test_correlation_id_in_validation_error(self):
         """Test correlation ID in 422 validation error."""
         cid = "validation-error-test-123456"
-        response = client.post(
-            "/items", json={"name": ""}, headers={"X-Correlation-ID": cid}
-        )
+        response = client.post("/items", json={"name": ""}, headers={"X-Correlation-ID": cid})
         assert response.status_code == 422
         assert response.headers["X-Correlation-ID"] == cid
         assert response.json()["correlation_id"] == cid
