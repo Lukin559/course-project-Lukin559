@@ -1,0 +1,196 @@
+name: Security - SBOM & SCA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, p09-sbom-sca]
+    paths:
+      - "**/*.py"
+      - "requirements*.txt"
+      - "pyproject.toml"
+      - ".github/workflows/ci-sbom-sca.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "**/*.py"
+      - "requirements*.txt"
+      - "pyproject.toml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Фиксированные версии инструментов для воспроизводимости
+  SYFT_VERSION: "v1.9.0"
+  GRYPE_VERSION: "v0.79.0"
+
+jobs:
+  sbom_sca:
+    name: SBOM & SCA Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        timeout-minutes: 2
+
+      - name: Ensure evidence directories
+        run: mkdir -p EVIDENCE/P09
+
+      # ============================================
+      # C1: Generate SBOM (Syft, CycloneDX format)
+      # ============================================
+      - name: Generate SBOM (Syft CycloneDX)
+        timeout-minutes: 5
+        run: |
+          echo "::group::Installing Syft ${{ env.SYFT_VERSION }}"
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin ${{ env.SYFT_VERSION }}
+          echo "::endgroup::"
+          
+          echo "::group::Generating SBOM"
+          syft packages dir:. -o cyclonedx-json > EVIDENCE/P09/sbom.json
+          echo "SBOM generated successfully"
+          echo "::endgroup::"
+          
+          # Add metadata
+          echo "Generated at: $(date -u +%Y-%m-%dT%H:%M:%SZ)" > EVIDENCE/P09/sbom_metadata.txt
+          echo "Commit: ${{ github.sha }}" >> EVIDENCE/P09/sbom_metadata.txt
+          echo "Branch: ${{ github.ref_name }}" >> EVIDENCE/P09/sbom_metadata.txt
+          echo "Syft version: ${{ env.SYFT_VERSION }}" >> EVIDENCE/P09/sbom_metadata.txt
+          echo "Job URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> EVIDENCE/P09/sbom_metadata.txt
+
+      # ============================================
+      # C2: SCA Scan (Grype)
+      # ============================================
+      - name: SCA Scan (Grype)
+        timeout-minutes: 5
+        run: |
+          echo "::group::Installing Grype ${{ env.GRYPE_VERSION }}"
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin ${{ env.GRYPE_VERSION }}
+          echo "::endgroup::"
+          
+          echo "::group::Running SCA scan"
+          grype sbom:EVIDENCE/P09/sbom.json -o json > EVIDENCE/P09/sca_report.json || true
+          echo "SCA scan completed"
+          echo "::endgroup::"
+
+      # ============================================
+      # C2: Generate SCA Summary
+      # ============================================
+      - name: Generate SCA Summary
+        timeout-minutes: 2
+        run: |
+          cat > EVIDENCE/P09/sca_summary.md << 'HEADER'
+          # SCA Vulnerability Summary
+          
+          **Generated:** $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          **Commit:** ${{ github.sha }}
+          **Branch:** ${{ github.ref_name }}
+          **Tools:** Syft ${{ env.SYFT_VERSION }} + Grype ${{ env.GRYPE_VERSION }}
+          
+          ## Vulnerability Count by Severity
+          
+          HEADER
+          
+          # Count vulnerabilities by severity
+          if [ -f EVIDENCE/P09/sca_report.json ]; then
+            echo '```json' >> EVIDENCE/P09/sca_summary.md
+            jq '[.matches[].vulnerability.severity] | group_by(.) | map({(.[0]): length}) | add // {}' \
+              EVIDENCE/P09/sca_report.json >> EVIDENCE/P09/sca_summary.md 2>/dev/null || echo '{}' >> EVIDENCE/P09/sca_summary.md
+            echo '```' >> EVIDENCE/P09/sca_summary.md
+            
+            # Extract counts for summary
+            CRITICAL=$(jq '[.matches[].vulnerability.severity] | map(select(.=="Critical")) | length' EVIDENCE/P09/sca_report.json 2>/dev/null || echo 0)
+            HIGH=$(jq '[.matches[].vulnerability.severity] | map(select(.=="High")) | length' EVIDENCE/P09/sca_report.json 2>/dev/null || echo 0)
+            MEDIUM=$(jq '[.matches[].vulnerability.severity] | map(select(.=="Medium")) | length' EVIDENCE/P09/sca_report.json 2>/dev/null || echo 0)
+            LOW=$(jq '[.matches[].vulnerability.severity] | map(select(.=="Low")) | length' EVIDENCE/P09/sca_report.json 2>/dev/null || echo 0)
+            NEGLIGIBLE=$(jq '[.matches[].vulnerability.severity] | map(select(.=="Negligible")) | length' EVIDENCE/P09/sca_report.json 2>/dev/null || echo 0)
+            UNKNOWN=$(jq '[.matches[].vulnerability.severity] | map(select(.=="Unknown")) | length' EVIDENCE/P09/sca_report.json 2>/dev/null || echo 0)
+            
+            echo "" >> EVIDENCE/P09/sca_summary.md
+            echo "| Severity | Count |" >> EVIDENCE/P09/sca_summary.md
+            echo "|----------|-------|" >> EVIDENCE/P09/sca_summary.md
+            echo "| Critical | $CRITICAL |" >> EVIDENCE/P09/sca_summary.md
+            echo "| High | $HIGH |" >> EVIDENCE/P09/sca_summary.md
+            echo "| Medium | $MEDIUM |" >> EVIDENCE/P09/sca_summary.md
+            echo "| Low | $LOW |" >> EVIDENCE/P09/sca_summary.md
+            echo "| Negligible | $NEGLIGIBLE |" >> EVIDENCE/P09/sca_summary.md
+            echo "| Unknown | $UNKNOWN |" >> EVIDENCE/P09/sca_summary.md
+            
+            # List Critical/High vulnerabilities
+            echo "" >> EVIDENCE/P09/sca_summary.md
+            echo "## Critical & High Vulnerabilities" >> EVIDENCE/P09/sca_summary.md
+            echo "" >> EVIDENCE/P09/sca_summary.md
+            
+            jq -r '.matches[] | select(.vulnerability.severity == "Critical" or .vulnerability.severity == "High") | "- **\(.vulnerability.id)** (\(.vulnerability.severity)): \(.artifact.name)@\(.artifact.version) - \(.vulnerability.description // "No description")[...]"' \
+              EVIDENCE/P09/sca_report.json 2>/dev/null | head -20 >> EVIDENCE/P09/sca_summary.md || echo "No Critical/High vulnerabilities found." >> EVIDENCE/P09/sca_summary.md
+            
+            # Action plan section
+            echo "" >> EVIDENCE/P09/sca_summary.md
+            echo "## Action Plan" >> EVIDENCE/P09/sca_summary.md
+            echo "" >> EVIDENCE/P09/sca_summary.md
+            echo "1. **Critical vulnerabilities:** Require immediate fix or waiver with justification" >> EVIDENCE/P09/sca_summary.md
+            echo "2. **High vulnerabilities:** Should be fixed within 30 days or waiver required" >> EVIDENCE/P09/sca_summary.md
+            echo "3. **Medium/Low:** Track and fix in regular maintenance cycles" >> EVIDENCE/P09/sca_summary.md
+            echo "" >> EVIDENCE/P09/sca_summary.md
+            echo "See \`policy/waivers.yml\` for documented exceptions." >> EVIDENCE/P09/sca_summary.md
+            
+            # Output to job summary
+            echo "### SCA Summary" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Severity | Count |" >> $GITHUB_STEP_SUMMARY
+            echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Critical | $CRITICAL |" >> $GITHUB_STEP_SUMMARY
+            echo "| High | $HIGH |" >> $GITHUB_STEP_SUMMARY
+            echo "| Medium | $MEDIUM |" >> $GITHUB_STEP_SUMMARY
+            echo "| Low | $LOW |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No SCA report found" >> EVIDENCE/P09/sca_summary.md
+          fi
+
+      # ============================================
+      # C4: Check waivers policy
+      # ============================================
+      - name: Validate waivers policy
+        timeout-minutes: 1
+        run: |
+          if [ -f policy/waivers.yml ]; then
+            echo "✅ Waivers policy found" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo '```yaml' >> $GITHUB_STEP_SUMMARY
+            cat policy/waivers.yml >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ No waivers policy found at policy/waivers.yml" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      # ============================================
+      # C3: Upload artifacts
+      # ============================================
+      - name: Upload SBOM/SCA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: P09_EVIDENCE
+          path: EVIDENCE/P09/
+          retention-days: 30
+
+      # ============================================
+      # Summary
+      # ============================================
+      - name: Job Summary
+        if: always()
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- \`EVIDENCE/P09/sbom.json\` - Software Bill of Materials (CycloneDX)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`EVIDENCE/P09/sca_report.json\` - Vulnerability scan results (Grype)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`EVIDENCE/P09/sca_summary.md\` - Human-readable summary" >> $GITHUB_STEP_SUMMARY
+          echo "- \`EVIDENCE/P09/sbom_metadata.txt\` - Generation metadata" >> $GITHUB_STEP_SUMMARY
+

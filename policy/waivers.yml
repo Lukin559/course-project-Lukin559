@@ -1,0 +1,56 @@
+# policy/waivers.yml — Vulnerability Waivers Policy
+# 
+# Этот файл содержит исключения (waivers) для уязвимостей,
+# которые не могут быть исправлены немедленно.
+#
+# Политика (см. project/69_sbom-vuln-mgmt.md):
+# - Critical: требует немедленного фикса или waiver с обоснованием (max 7 дней)
+# - High: должен быть исправлен в течение 30 дней или waiver
+# - Medium/Low: отслеживаются, исправляются в рамках регулярного обслуживания
+#
+# Каждый waiver должен содержать:
+# - id: CVE идентификатор
+# - package: имя пакета
+# - version: версия (или диапазон)
+# - severity: уровень критичности
+# - reason: обоснование исключения
+# - issue: ссылка на Issue/PR
+# - expires_at: срок действия waiver
+# - approved_by: кто одобрил
+# - mitigations: предпринятые меры по снижению риска
+
+waivers:
+  # Пример waiver для демонстрации (реальный CVE из зависимостей проекта)
+  - id: "GHSA-2m57-hf25-phgg"
+    package: "redis"
+    version: ">=4.5.0,<5.0.1"
+    severity: "High"
+    reason: |
+      Уязвимость связана с некорректной обработкой ответов в redis-py при использовании 
+      AsyncSentinelManagedConnection. В нашем проекте:
+      1. Redis используется только для rate limiting (не для Sentinel)
+      2. Все соединения локальные (localhost в dev, внутренняя сеть в prod)
+      3. Нет использования AsyncSentinelManagedConnection
+    mitigations:
+      - "Ограничен доступ к Redis только из внутренней сети"
+      - "Используется синхронный клиент без Sentinel"
+      - "Запланировано обновление до redis>=5.0.1 в следующем релизе"
+    issue: "https://github.com/Lukin559/course-project-Lukin559/issues/1"
+    expires_at: "2025-02-01"
+    approved_by: "ilalukin@edu.example.org"
+    created_at: "2024-12-03"
+
+  # Шаблон для добавления новых waivers:
+  # - id: "CVE-YYYY-XXXXX"
+  #   package: "package-name"
+  #   version: "x.y.z"
+  #   severity: "High|Medium|Low"
+  #   reason: "Обоснование почему waiver необходим"
+  #   mitigations:
+  #     - "Мера 1"
+  #     - "Мера 2"
+  #   issue: "https://github.com/<org>/<repo>/issues/N"
+  #   expires_at: "YYYY-MM-DD"
+  #   approved_by: "email@example.org"
+  #   created_at: "YYYY-MM-DD"
+
