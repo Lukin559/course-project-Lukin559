@@ -24,9 +24,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Фиксированные версии инструментов для воспроизводимости
-  SYFT_VERSION: "v1.9.0"
-  GRYPE_VERSION: "v0.79.0"
+  SYFT_VERSION: "v1.20.0"
+  GRYPE_VERSION: "v0.84.0"
 
 jobs:
   sbom_sca:

@@ -1,7 +1,0 @@
-# Артефакты P09 (SBOM & SCA) генерируются CI workflow
-# Файлы:
-# - sbom.json - Software Bill of Materials (CycloneDX)
-# - sca_report.json - Vulnerability scan results (Grype)
-# - sca_summary.md - Human-readable summary
-# - sbom_metadata.txt - Generation metadata
-
