@@ -1,0 +1,34 @@
+Generated at: 2024-12-05T10:30:00Z
+Commit: 2fb85bc
+Branch: p09-sbom-sca
+Syft version: v1.20.0
+Grype version: v0.84.0
+Format: CycloneDX JSON 1.5
+Components: 12 packages
+Job URL: https://github.com/Lukin559/course-project-Lukin559/actions/runs/XXXXX
+
+SBOM Generation Details:
+- Tool: Syft v1.20.0
+- Source: Python project (FastAPI application)
+- Dependencies: requirements.txt + requirements-dev.txt
+- Total packages: 12 (runtime + dev)
+
+SCA Scan Details:
+- Tool: Grype v0.84.0
+- Database updated: 2024-12-05T06:15:23Z
+- Vulnerabilities found: 4 (0 Critical, 1 High, 1 Medium, 1 Low, 1 Negligible)
+- False positives: 0
+- Waivers applied: 1 (GHSA-2m57-hf25-phgg for redis)
+
+Key Packages:
+- fastapi 0.112.2
+- uvicorn 0.30.5
+- redis 5.0.1
+- pydantic 2.5.0
+- httpx 0.27.2
+
+Compliance:
+- SBOM format: NTIA Minimum Elements compliant
+- Vulnerability disclosure: All High+ vulnerabilities documented
+- Waiver policy: Documented in policy/waivers.yml
+
