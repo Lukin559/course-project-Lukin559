@@ -1,0 +1,138 @@
+# Gitleaks configuration for course-project-Lukin559
+# This config extends default Gitleaks rules with project-specific allowlists
+
+title = "Gitleaks config for SecDev course project"
+
+# Use built-in rules as baseline
+[extend]
+useDefault = true
+
+# ============================================
+# Allowlist: False positives and test data
+# ============================================
+[allowlist]
+description = "Ignore known false positives and test fixtures"
+
+# Ignore paths
+paths = [
+    # Evidence and reports
+    '''EVIDENCE/''',
+    '''reports/''',
+    
+    # Documentation with example secrets
+    '''docs/''',
+    '''README.md''',
+    '''SECURITY.md''',
+    
+    # Test fixtures
+    '''tests/fixtures/''',
+    '''tests/data/''',
+    
+    # Git metadata
+    '''.git/''',
+    
+    # CI/CD configs (reviewed separately)
+    '''.github/workflows/''',
+]
+
+# Ignore specific commits (if needed)
+commits = [
+    # Example: "commit-sha-with-false-positive"
+]
+
+# Regex patterns to ignore
+regexes = [
+    # Test/example secrets with obvious markers
+    '''TEST_SECRET_DO_NOT_USE''',
+    '''EXAMPLE_API_KEY''',
+    '''DUMMY_PASSWORD''',
+    '''fake_jwt_secret_for_testing''',
+    
+    # Common false positives
+    '''(?i)example\.com''',
+    '''(?i)localhost''',
+    '''127\.0\.0\.1''',
+    
+    # Placeholder values
+    '''YOUR_SECRET_HERE''',
+    '''CHANGEME''',
+    '''<secret>''',
+    '''<api-key>''',
+    
+    # UUID/random looking strings that aren't secrets
+    '''[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}''',  # UUID format
+    
+    # Docker image SHAs
+    '''sha256:[a-f0-9]{64}''',
+]
+
+# ============================================
+# Custom rules (additions to defaults)
+# ============================================
+
+[[rules]]
+id = "jwt-secret-env"
+description = "JWT_SECRET environment variable reference"
+regex = '''JWT_SECRET\s*[:=]\s*['"][^'"]{8,}['"]'''
+tags = ["key", "JWT"]
+[rules.allowlist]
+    regexes = [
+        '''JWT_SECRET.*\$\{.*\}''',  # Environment variable reference
+        '''JWT_SECRET.*os\.environ''',  # Python env var access
+    ]
+
+[[rules]]
+id = "database-url"
+description = "Database connection string with credentials"
+regex = '''(?i)(postgres|mysql|mongodb)://[a-z0-9]+:[^@\s]+@'''
+tags = ["key", "database"]
+[rules.allowlist]
+    regexes = [
+        '''(?i)localhost''',
+        '''(?i)example\.com''',
+        '''(?i)test_user''',
+    ]
+
+[[rules]]
+id = "redis-password"
+description = "Redis password in connection string"
+regex = '''redis://:[^@\s]{8,}@'''
+tags = ["key", "redis"]
+[rules.allowlist]
+    regexes = [
+        '''localhost''',
+        '''redis://:[^@]*@localhost''',
+    ]
+
+# ============================================
+# Global settings
+# ============================================
+
+[extend]
+# Additional entropy checking
+[[extend.rules]]
+id = "high-entropy-strings"
+description = "Detect high-entropy strings that might be secrets"
+regex = '''[a-zA-Z0-9+/]{40,}={0,2}'''  # Base64-like strings
+entropy = 4.5
+tags = ["entropy"]
+
+# ============================================
+# Notes for reviewers
+# ============================================
+# 
+# This configuration:
+# 1. Extends default Gitleaks rules (covers common secret patterns)
+# 2. Ignores evidence/reports directories (contain scan results)
+# 3. Allows test fixtures with obvious dummy values
+# 4. Adds custom rules for JWT, database URLs, Redis passwords
+# 5. Uses entropy detection for unknown secret patterns
+#
+# To update allowlist:
+# 1. Review Gitleaks findings in EVIDENCE/P10/gitleaks.json
+# 2. Confirm false positives (not real secrets)
+# 3. Add specific path/regex to allowlist with comment explaining why
+# 4. Re-run Gitleaks to verify
+#
+# NEVER add real secrets to allowlist - rotate them instead!
+
