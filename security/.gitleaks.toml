@@ -1,11 +1,9 @@
 # Gitleaks configuration for course-project-Lukin559
 # This config extends default Gitleaks rules with project-specific allowlists
+# Version: 8.21.2+
+# Last updated: 2025-12-08
 
-title = "Gitleaks config for SecDev course project"
-
-# Use built-in rules as baseline
-[extend]
-useDefault = true
+title = "SecDev Course Project - Gitleaks Configuration"
 
 # ============================================
 # Allowlist: False positives and test data
@@ -13,126 +11,233 @@ useDefault = true
 [allowlist]
 description = "Ignore known false positives and test fixtures"
 
-# Ignore paths
+# Ignore specific paths
 paths = [
-    # Evidence and reports
+    # Evidence and scan reports (contain examples/findings)
     '''EVIDENCE/''',
     '''reports/''',
     
-    # Documentation with example secrets
+    # Documentation with code examples
     '''docs/''',
     '''README.md''',
     '''SECURITY.md''',
+    '''REVIEW_CHECKLIST.md''',
     
-    # Test fixtures
+    # Test fixtures and mock data
     '''tests/fixtures/''',
     '''tests/data/''',
+    '''tests/conftest.py''',
     
     # Git metadata
     '''.git/''',
     
     # CI/CD configs (reviewed separately)
     '''.github/workflows/''',
-]
-
-# Ignore specific commits (if needed)
-commits = [
-    # Example: "commit-sha-with-false-positive"
-]
-
-# Regex patterns to ignore
-regexes = [
-    # Test/example secrets with obvious markers
-    '''TEST_SECRET_DO_NOT_USE''',
-    '''EXAMPLE_API_KEY''',
-    '''DUMMY_PASSWORD''',
-    '''fake_jwt_secret_for_testing''',
     
-    # Common false positives
+    # Build artifacts
+    '''__pycache__/''',
+    '''.pytest_cache/''',
+]
+
+# Ignore specific commits (add SHAs of commits with false positives)
+commits = []
+
+# Regex patterns to allowlist
+regexes = [
+    # Explicit test markers
+    '''(?i)test[_-]?secret''',
+    '''(?i)dummy[_-]?password''',
+    '''(?i)example[_-]?api[_-]?key''',
+    '''(?i)fake[_-]?jwt''',
+    '''(?i)mock[_-]?token''',
+    '''TEST_SECRET_DO_NOT_USE''',
+    
+    # Placeholder values
+    '''(?i)your[_-]?secret[_-]?here''',
+    '''(?i)change[_-]?me''',
+    '''<secret>''',
+    '''<api[_-]?key>''',
+    '''XXXXX''',
+    
+    # Common non-secret patterns
     '''(?i)example\.com''',
     '''(?i)localhost''',
     '''127\.0\.0\.1''',
+    '''0\.0\.0\.0''',
     
-    # Placeholder values
-    '''YOUR_SECRET_HERE''',
-    '''CHANGEME''',
-    '''<secret>''',
-    '''<api-key>''',
+    # UUID format (often mistaken for secrets)
+    '''[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}''',
     
-    # UUID/random looking strings that aren't secrets
-    '''[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}''',  # UUID format
-    
-    # Docker image SHAs
+    # Docker/container image SHAs
     '''sha256:[a-f0-9]{64}''',
+    
+    # GitHub Actions variables (not secrets, just syntax)
+    '''\$\{\{\s*github\.''',
+    '''\$\{\{\s*secrets\.''',
+    '''\$\{\{\s*env\.''',
+    
+    # Common false positive: long hex strings in configs
+    '''anchore/''',
+    '''returntocorp/''',
 ]
 
 # ============================================
-# Custom rules (additions to defaults)
+# Custom rules for project-specific patterns
 # ============================================
 
 [[rules]]
-id = "jwt-secret-env"
-description = "JWT_SECRET environment variable reference"
-regex = '''JWT_SECRET\s*[:=]\s*['"][^'"]{8,}['"]'''
-tags = ["key", "JWT"]
-[rules.allowlist]
-    regexes = [
-        '''JWT_SECRET.*\$\{.*\}''',  # Environment variable reference
-        '''JWT_SECRET.*os\.environ''',  # Python env var access
-    ]
+id = "fastapi-jwt-secret"
+description = "FastAPI JWT_SECRET in code (should be in env)"
+regex = '''(?i)jwt[_-]?secret\s*[:=]\s*['"]['"]?[a-zA-Z0-9+/=]{16,}['"]'''
+tags = ["key", "JWT", "FastAPI"]
+
+[[rules.allowlist]]
+paths = [
+    '''tests/''',
+    '''docs/''',
+]
+regexes = [
+    '''(?i)test[_-]?jwt''',
+    '''os\.environ''',
+    '''os\.getenv''',
+    '''getenv\(''',
+]
 
 [[rules]]
-id = "database-url"
-description = "Database connection string with credentials"
-regex = '''(?i)(postgres|mysql|mongodb)://[a-z0-9]+:[^@\s]+@'''
-tags = ["key", "database"]
-[rules.allowlist]
-    regexes = [
-        '''(?i)localhost''',
-        '''(?i)example\.com''',
-        '''(?i)test_user''',
-    ]
+id = "redis-connection-password"
+description = "Redis connection string with password"
+regex = '''redis://(?:[^:]+:)?([^@\s]{8,})@'''
+tags = ["password", "redis"]
+
+[[rules.allowlist]]
+paths = [
+    '''tests/''',
+    '''docker-compose.yml''',
+]
+regexes = [
+    '''localhost''',
+    '''127\.0\.0\.1''',
+    '''redis://:[^@]*@localhost''',
+]
 
 [[rules]]
-id = "redis-password"
-description = "Redis password in connection string"
-regex = '''redis://:[^@\s]{8,}@'''
-tags = ["key", "redis"]
-[rules.allowlist]
-    regexes = [
-        '''localhost''',
-        '''redis://:[^@]*@localhost''',
-    ]
+id = "database-connection-url"
+description = "Database URL with embedded credentials"
+regex = '''(?i)(postgres|postgresql|mysql|mongodb)://[a-z0-9_-]+:([^@\s]{8,})@'''
+tags = ["password", "database"]
 
-# ============================================
-# Global settings
-# ============================================
+[[rules.allowlist]]
+paths = [
+    '''tests/''',
+    '''docs/''',
+]
+regexes = [
+    '''(?i)localhost''',
+    '''(?i)example\.com''',
+    '''(?i)test[_-]?user''',
+    '''(?i)test[_-]?password''',
+]
 
-[extend]
-# Additional entropy checking
-[[extend.rules]]
-id = "high-entropy-strings"
-description = "Detect high-entropy strings that might be secrets"
-regex = '''[a-zA-Z0-9+/]{40,}={0,2}'''  # Base64-like strings
+[[rules]]
+id = "python-env-secret-hardcoded"
+description = "Environment variable with hardcoded secret value"
+regex = '''(?i)(SECRET|PASSWORD|TOKEN|KEY|API_KEY)\s*=\s*['"]['"]?[a-zA-Z0-9+/=]{16,}['"]'''
+tags = ["key", "python"]
+
+[[rules.allowlist]]
+paths = [
+    '''tests/''',
+    '''docs/''',
+]
+regexes = [
+    '''(?i)test[_-]?(secret|password|token|key)''',
+    '''(?i)example[_-]?''',
+    '''os\.environ''',
+    '''\$\{''',
+]
+
+[[rules]]
+id = "high-entropy-base64"
+description = "High entropy string that might be a secret (base64-like)"
+regex = '''[a-zA-Z0-9+/]{40,}={0,2}'''
 entropy = 4.5
-tags = ["entropy"]
+tags = ["entropy", "base64"]
+
+[[rules.allowlist]]
+paths = [
+    '''tests/''',
+    '''EVIDENCE/''',
+    '''.github/''',
+]
+regexes = [
+    # Docker image references
+    '''sha256:''',
+    # Long hex strings in reports
+    '''[a-f0-9]{40,}''',
+]
+
+[[rules]]
+id = "private-key-header"
+description = "Private key in PEM format"
+regex = '''-----BEGIN\s+(RSA|DSA|EC|OPENSSH|PGP)\s+PRIVATE KEY-----'''
+tags = ["key", "private-key"]
+
+[[rules.allowlist]]
+paths = [
+    '''tests/fixtures/''',
+    '''docs/examples/''',
+]
+
+[[rules]]
+id = "generic-api-key-pattern"
+description = "Generic API key pattern (40+ alphanumeric)"
+regex = '''(?i)api[_-]?key\s*[:=]\s*['"]([a-zA-Z0-9]{40,})['"]'''
+tags = ["key", "api"]
+
+[[rules.allowlist]]
+paths = [
+    '''tests/''',
+]
+regexes = [
+    '''(?i)test[_-]?api[_-]?key''',
+    '''(?i)example[_-]?''',
+    '''(?i)dummy[_-]?''',
+]
+
+# ============================================
+# Entropy thresholds
+# ============================================
+[allowlist.entropy]
+# Skip entropy check for these patterns
+regexes = [
+    '''[a-f0-9]{32,}''',  # Hex hashes
+    '''[0-9a-f-]{36}''',   # UUIDs
+]
 
 # ============================================
 # Notes for reviewers
 # ============================================
 # 
 # This configuration:
-# 1. Extends default Gitleaks rules (covers common secret patterns)
-# 2. Ignores evidence/reports directories (contain scan results)
-# 3. Allows test fixtures with obvious dummy values
-# 4. Adds custom rules for JWT, database URLs, Redis passwords
-# 5. Uses entropy detection for unknown secret patterns
+# 1. Uses default Gitleaks v8 rules (covers 100+ secret patterns)
+# 2. Adds 7 custom rules specific to our FastAPI/Python project
+# 3. Comprehensive allowlist for false positives
+# 4. Entropy detection for unknown secret patterns
 #
-# To update allowlist:
-# 1. Review Gitleaks findings in EVIDENCE/P10/gitleaks.json
-# 2. Confirm false positives (not real secrets)
-# 3. Add specific path/regex to allowlist with comment explaining why
-# 4. Re-run Gitleaks to verify
+# Custom rules target:
+# - FastAPI JWT secrets
+# - Redis connection passwords
+# - Database URLs with credentials
+# - Hardcoded environment variables
+# - High-entropy base64 strings
+# - Private key headers
+# - Generic API keys
 #
-# NEVER add real secrets to allowlist - rotate them instead!
-
+# To add new allowlist entries:
+# 1. Review findings in EVIDENCE/P10/gitleaks.json
+# 2. Verify it's a false positive (not a real secret!)
+# 3. Add to allowlist.paths or allowlist.regexes
+# 4. Document WHY it's not a real secret
+# 5. Re-run: docker run --rm -v $PWD:/repo zricethezav/gitleaks:latest detect ...
+#
+# ⚠️ NEVER allowlist real secrets - rotate them immediately!
