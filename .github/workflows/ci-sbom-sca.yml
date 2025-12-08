@@ -4,17 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches: [main, p09-sbom-sca]
-    paths:
-      - "**/*.py"
-      - "requirements*.txt"
-      - "pyproject.toml"
-      - ".github/workflows/ci-sbom-sca.yml"
   pull_request:
     branches: [main]
-    paths:
-      - "**/*.py"
-      - "requirements*.txt"
-      - "pyproject.toml"
 
 permissions:
   contents: read
