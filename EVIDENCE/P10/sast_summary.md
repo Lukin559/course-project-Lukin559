@@ -3,7 +3,7 @@
 **Generated:** 2025-12-08T10:30:00Z  
 **Commit:** c14b443 (p10-sast-secrets branch)  
 **Branch:** p10-sast-secrets  
-**Tools:** Semgrep 1.95.0 + Gitleaks 8.21.2  
+**Tools:** Semgrep 1.97.0 + Gitleaks 8.22.0  
 
 ## Semgrep SAST Results
 

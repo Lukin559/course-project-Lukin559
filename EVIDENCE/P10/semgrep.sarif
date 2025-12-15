@@ -6,7 +6,7 @@
       "tool": {
         "driver": {
           "name": "Semgrep",
-          "semanticVersion": "1.95.0",
+          "semanticVersion": "1.97.0",
           "informationUri": "https://semgrep.dev",
           "rules": []
         }
