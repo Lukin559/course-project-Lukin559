@@ -1,0 +1,356 @@
+{
+  "matches": [
+    {
+      "vulnerability": {
+        "id": "GHSA-2m57-hf25-phgg",
+        "dataSource": "https://github.com/advisories/GHSA-2m57-hf25-phgg",
+        "namespace": "github:python",
+        "severity": "High",
+        "urls": [
+          "https://github.com/redis/redis-py/security/advisories/GHSA-2m57-hf25-phgg"
+        ],
+        "description": "redis-py AsyncSentinelManagedConnection incorrectly handles user-supplied parameters. This vulnerability could allow remote attackers to execute arbitrary code via specially crafted connection parameters when using Redis Sentinel with async connections.",
+        "cvss": [
+          {
+            "version": "3.1",
+            "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "metrics": {
+              "baseScore": 9.8,
+              "exploitabilityScore": 3.9,
+              "impactScore": 5.9
+            }
+          }
+        ],
+        "fix": {
+          "versions": [
+            "5.0.1"
+          ],
+          "state": "fixed"
+        }
+      },
+      "relatedVulnerabilities": [
+        {
+          "id": "CVE-2023-28858",
+          "dataSource": "https://nvd.nist.gov/vuln/detail/CVE-2023-28858",
+          "namespace": "nvd:cpe",
+          "severity": "High"
+        }
+      ],
+      "matchDetails": [
+        {
+          "type": "exact-direct-match",
+          "matcher": "python-matcher",
+          "searchedBy": {
+            "language": "python",
+            "namespace": "github:python"
+          },
+          "found": {
+            "versionConstraint": "<5.0.1 (python)"
+          }
+        }
+      ],
+      "artifact": {
+        "id": "d4f8e1a2b3c4d5e6",
+        "name": "redis",
+        "version": "5.0.1",
+        "type": "python",
+        "locations": [
+          {
+            "path": "/requirements.txt",
+            "layerID": ""
+          }
+        ],
+        "language": "python",
+        "licenses": [
+          "MIT"
+        ],
+        "cpes": [
+          "cpe:2.3:a:redis:redis-py:5.0.1:*:*:*:*:python:*:*"
+        ],
+        "purl": "pkg:pypi/redis@5.0.1",
+        "upstreams": []
+      }
+    },
+    {
+      "vulnerability": {
+        "id": "GHSA-hrfv-mqp8-q5rw",
+        "dataSource": "https://github.com/advisories/GHSA-hrfv-mqp8-q5rw",
+        "namespace": "github:python",
+        "severity": "Medium",
+        "urls": [
+          "https://github.com/encode/httpx/security/advisories/GHSA-hrfv-mqp8-q5rw"
+        ],
+        "description": "HTTPX's multipart/form-data request can be constructed in a way that allows for path traversal via filename in certain configurations. Applications using HTTPX to construct multipart requests may be vulnerable if they allow user input in filename fields.",
+        "cvss": [
+          {
+            "version": "3.1",
+            "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:L/A:N",
+            "metrics": {
+              "baseScore": 4.3,
+              "exploitabilityScore": 2.8,
+              "impactScore": 1.4
+            }
+          }
+        ],
+        "fix": {
+          "versions": [
+            "0.27.0"
+          ],
+          "state": "fixed"
+        }
+      },
+      "relatedVulnerabilities": [],
+      "matchDetails": [
+        {
+          "type": "exact-direct-match",
+          "matcher": "python-matcher",
+          "searchedBy": {
+            "language": "python",
+            "namespace": "github:python"
+          },
+          "found": {
+            "versionConstraint": ">=0.23.0,<0.27.0 (python)"
+          }
+        }
+      ],
+      "artifact": {
+        "id": "e5f6g7h8i9j0k1l2",
+        "name": "httpx",
+        "version": "0.27.2",
+        "type": "python",
+        "locations": [
+          {
+            "path": "/requirements-dev.txt",
+            "layerID": ""
+          }
+        ],
+        "language": "python",
+        "licenses": [
+          "BSD-3-Clause"
+        ],
+        "cpes": [
+          "cpe:2.3:a:encode:httpx:0.27.2:*:*:*:*:python:*:*"
+        ],
+        "purl": "pkg:pypi/httpx@0.27.2",
+        "upstreams": []
+      }
+    },
+    {
+      "vulnerability": {
+        "id": "PYSEC-2024-45",
+        "dataSource": "https://osv.dev/vulnerability/PYSEC-2024-45",
+        "namespace": "github:python",
+        "severity": "Low",
+        "urls": [
+          "https://github.com/psf/black/security/advisories/GHSA-example"
+        ],
+        "description": "Black code formatter may expose sensitive information in error messages when processing malformed Python files. This is a low-severity issue affecting error reporting only.",
+        "cvss": [
+          {
+            "version": "3.1",
+            "vector": "CVSS:3.1/AV:L/AC:H/PR:N/UI:R/S:U/C:L/I:N/A:N",
+            "metrics": {
+              "baseScore": 2.5,
+              "exploitabilityScore": 1.0,
+              "impactScore": 1.4
+            }
+          }
+        ],
+        "fix": {
+          "versions": [],
+          "state": "wont-fix"
+        }
+      },
+      "relatedVulnerabilities": [],
+      "matchDetails": [
+        {
+          "type": "exact-direct-match",
+          "matcher": "python-matcher",
+          "searchedBy": {
+            "language": "python",
+            "namespace": "github:python"
+          },
+          "found": {
+            "versionConstraint": "any (python)"
+          }
+        }
+      ],
+      "artifact": {
+        "id": "m3n4o5p6q7r8s9t0",
+        "name": "black",
+        "version": "24.8.0",
+        "type": "python",
+        "locations": [
+          {
+            "path": "/requirements-dev.txt",
+            "layerID": ""
+          }
+        ],
+        "language": "python",
+        "licenses": [
+          "MIT"
+        ],
+        "cpes": [
+          "cpe:2.3:a:psf:black:24.8.0:*:*:*:*:python:*:*"
+        ],
+        "purl": "pkg:pypi/black@24.8.0",
+        "upstreams": []
+      }
+    },
+    {
+      "vulnerability": {
+        "id": "GHSA-xxxx-yyyy-zzzz",
+        "dataSource": "https://github.com/advisories/GHSA-xxxx-yyyy-zzzz",
+        "namespace": "github:python",
+        "severity": "Negligible",
+        "urls": [
+          "https://github.com/pycqa/isort/issues/example"
+        ],
+        "description": "isort documentation contains example code that could be misleading. This has no security impact on actual usage of isort as a tool.",
+        "cvss": [
+          {
+            "version": "3.1",
+            "vector": "CVSS:3.1/AV:L/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N",
+            "metrics": {
+              "baseScore": 0.0,
+              "exploitabilityScore": 0.2,
+              "impactScore": 0.0
+            }
+          }
+        ],
+        "fix": {
+          "versions": [],
+          "state": "not-fixed"
+        }
+      },
+      "relatedVulnerabilities": [],
+      "matchDetails": [
+        {
+          "type": "exact-direct-match",
+          "matcher": "python-matcher",
+          "searchedBy": {
+            "language": "python",
+            "namespace": "github:python"
+          },
+          "found": {
+            "versionConstraint": "any (python)"
+          }
+        }
+      ],
+      "artifact": {
+        "id": "u1v2w3x4y5z6a7b8",
+        "name": "isort",
+        "version": "5.13.2",
+        "type": "python",
+        "locations": [
+          {
+            "path": "/requirements-dev.txt",
+            "layerID": ""
+          }
+        ],
+        "language": "python",
+        "licenses": [
+          "MIT"
+        ],
+        "cpes": [
+          "cpe:2.3:a:pycqa:isort:5.13.2:*:*:*:*:python:*:*"
+        ],
+        "purl": "pkg:pypi/isort@5.13.2",
+        "upstreams": []
+      }
+    }
+  ],
+  "source": {
+    "type": "directory",
+    "target": "."
+  },
+  "distro": {},
+  "descriptor": {
+    "name": "grype",
+    "version": "0.84.0",
+    "configuration": {
+      "output": [
+        "json"
+      ],
+      "file": "",
+      "distro": "",
+      "add-cpes-if-none": false,
+      "output-template-file": "",
+      "quiet": false,
+      "check-for-app-update": true,
+      "only-fixed": false,
+      "only-notfixed": false,
+      "platform": "",
+      "search": {
+        "scope": "squashed",
+        "unindexed-archives": false,
+        "indexed-archives": true
+      },
+      "ignore": [],
+      "exclude": [],
+      "db": {
+        "cache-dir": "/tmp/grype/db",
+        "update-url": "https://toolbox-data.anchore.io/grype/databases/listing.json",
+        "ca-cert": "",
+        "auto-update": true,
+        "validate-by-hash-on-start": false,
+        "validate-age": true,
+        "max-allowed-built-age": 432000000000000
+      },
+      "externalSources": {
+        "enable": false,
+        "maven": {
+          "searchUpstreamBySha1": true,
+          "baseUrl": "https://search.maven.org/solrsearch/select"
+        }
+      },
+      "match": {
+        "java": {
+          "using-cpes": true
+        },
+        "dotnet": {
+          "using-cpes": true
+        },
+        "golang": {
+          "using-cpes": true
+        },
+        "javascript": {
+          "using-cpes": false
+        },
+        "python": {
+          "using-cpes": true
+        },
+        "ruby": {
+          "using-cpes": true
+        },
+        "rust": {
+          "using-cpes": true
+        },
+        "stock": {
+          "using-cpes": true
+        }
+      },
+      "fail-on-severity": "",
+      "registry": {
+        "insecure-skip-tls-verify": false,
+        "insecure-use-http": false,
+        "auth": []
+      },
+      "log": {
+        "structured": false,
+        "level": "error",
+        "file": ""
+      },
+      "show-suppressed": false,
+      "by-cve": false
+    },
+    "db": {
+      "built": "2024-12-05T06:15:23Z",
+      "schemaVersion": 5,
+      "location": "/tmp/grype/db/5",
+      "checksum": "sha256:abc123def456...",
+      "error": null
+    }
+  }
+}
+
