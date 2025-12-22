@@ -1,0 +1,165 @@
+rules:
+  # ============================================
+  # Custom Semgrep rules for FastAPI project
+  # ============================================
+  
+  # Rule 1: Detect potential XSS in HTMLResponse
+  - id: fastapi-unsafe-html-response
+    languages: [python]
+    message: |
+      Potentially unsafe user data in HTMLResponse. This could lead to XSS.
+      Consider using template engine with auto-escaping or validating/sanitizing input.
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-79: Cross-site Scripting (XSS)"
+      confidence: HIGH
+      references:
+        - https://owasp.org/www-community/attacks/xss/
+    patterns:
+      - pattern-either:
+          - pattern: |
+              HTMLResponse(..., content=f"...{$VAR}...", ...)
+          - pattern: |
+              HTMLResponse(f"...{$VAR}...")
+          - pattern: |
+              HTMLResponse($X + $VAR + ...)
+    fix: |
+      Use Jinja2 templates with auto-escaping or validate/sanitize $VAR
+
+  # Rule 2: Hardcoded secrets detection
+  - id: python-hardcoded-secret
+    languages: [python]
+    message: |
+      Potential hardcoded secret detected. Secrets should be loaded from environment
+      variables or secure secret management systems.
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+      confidence: MEDIUM
+    patterns:
+      - pattern-either:
+          - pattern: $VAR = "..."
+          - pattern: $VAR = '...'
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: (?i)(password|secret|api_key|token|jwt_secret|db_password|database_url)
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: ^(?!.*test).*  # Exclude test variables
+    fix: |
+      Load from environment: os.environ.get("SECRET_NAME")
+
+  # Rule 3: SQL injection via string formatting
+  - id: python-sql-injection-format
+    languages: [python]
+    message: |
+      Potential SQL injection via string formatting. Use parameterized queries.
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: "CWE-89: SQL Injection"
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $CONN.execute(f"... {$VAR} ...")
+          - pattern: |
+              $CONN.execute("... " + $VAR + ...)
+          - pattern: |
+              $CONN.execute("... %s ..." % $VAR)
+    fix: |
+      Use parameterized queries: execute("SELECT * FROM users WHERE id = ?", (user_id,))
+
+  # Rule 4: Unsafe pickle deserialization
+  - id: python-unsafe-pickle
+    languages: [python]
+    message: |
+      Unsafe use of pickle.loads() with untrusted data. This can lead to arbitrary
+      code execution. Consider using safer serialization formats like JSON.
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-502: Deserialization of Untrusted Data"
+      confidence: HIGH
+    pattern: pickle.loads($DATA)
+    fix: |
+      Use json.loads() for untrusted data or validate source before pickle.loads()
+
+  # Rule 5: Debug mode in production
+  - id: fastapi-debug-enabled
+    languages: [python]
+    message: |
+      FastAPI/Uvicorn running with debug=True. This should never be enabled in production
+      as it exposes sensitive information and enables hot reload.
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-489: Active Debug Code"
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: |
+              uvicorn.run(..., reload=True, ...)
+          - pattern: |
+              FastAPI(..., debug=True, ...)
+    fix: |
+      Remove debug/reload flags or use environment variable: debug=os.getenv("DEBUG", "false") == "true"
+
+  # Rule 6: Missing input validation
+  - id: fastapi-missing-pydantic-validation
+    languages: [python]
+    message: |
+      FastAPI endpoint accepts raw dict/str without Pydantic validation.
+      This bypasses automatic validation and could lead to injection attacks.
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-20: Improper Input Validation"
+      confidence: MEDIUM
+    patterns:
+      - pattern: |
+          @$APP.$METHOD(...)
+          def $FUNC(..., $PARAM: dict, ...):
+            ...
+    fix: |
+      Define a Pydantic model: class MyModel(BaseModel): ... and use $PARAM: MyModel
+
+  # Rule 7: Weak cryptographic hash (MD5/SHA1)
+    - id: python-weak-hash
+    languages: [python]
+    message: |
+      Use of weak cryptographic hash function (MD5 or SHA1). These are vulnerable
+      to collision attacks. Use SHA256 or better for security purposes.
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-328: Use of Weak Hash"
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: hashlib.md5(...)
+          - pattern: hashlib.sha1(...)
+    fix: |
+      Use hashlib.sha256() or hashlib.blake2b() for cryptographic purposes
+
+  # Rule 8: Unvalidated redirect
+  - id: fastapi-unvalidated-redirect
+    languages: [python]
+    message: |
+      Potential unvalidated redirect. User-controlled URL could lead to phishing attacks.
+      Validate redirect target against allowlist.
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: "CWE-601: URL Redirection to Untrusted Site"
+      confidence: MEDIUM
+    patterns:
+      - pattern: |
+          RedirectResponse($URL)
+      - pattern-not: |
+          RedirectResponse("/...")
+    fix: |
+      Validate URL against allowlist before redirecting
+

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Semgrep",
+          "semanticVersion": "1.97.0",
+          "informationUri": "https://semgrep.dev",
+          "rules": []
+        }
+      },
+      "results": [],
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "endTimeUtc": "2025-12-08T10:30:00Z"
+        }
+      ]
+    }
+  ]
+}
+
