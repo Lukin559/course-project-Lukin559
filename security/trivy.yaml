@@ -1,0 +1,40 @@
+# Trivy configuration for container vulnerability scanning
+# Trivy scans container images for vulnerabilities (OS packages and application dependencies)
+# https://aquasecurity.github.io/trivy/
+
+# Vulnerability scanning configuration
+scan:
+  # Types of security issues to detect
+  scanners:
+    - vuln      # Vulnerabilities in OS packages and language-specific packages
+    - config    # Misconfigurations
+    - secret    # Secrets and credentials
+
+  # Severity levels to report
+  severity:
+    - CRITICAL
+    - HIGH
+    - MEDIUM
+    # - LOW
+    # - UNKNOWN
+
+# Output format
+format: json
+
+# Vulnerability database
+# db:
+#   skip-update: false
+
+# Cache settings
+# cache:
+#   ttl: 24h
+
+# Exit code configuration
+# exit-code: 1  # Non-zero exit code if vulnerabilities found
+
+# Ignore unfixed vulnerabilities (optional)
+# ignore-unfixed: true
+
+# Timeout for scanning
+# timeout: 5m
+

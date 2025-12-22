@@ -1,0 +1,19 @@
+# Kubernetes Service for SecDev Course App
+# Exposes the application within the cluster
+apiVersion: v1
+kind: Service
+metadata:
+  name: secdev-app
+  labels:
+    app: secdev-app
+spec:
+  type: ClusterIP  # ClusterIP for internal access, LoadBalancer for external
+  selector:
+    app: secdev-app
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8000
+    protocol: TCP
+  sessionAffinity: None
+
