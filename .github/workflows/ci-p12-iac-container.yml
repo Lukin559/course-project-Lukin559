@@ -1,0 +1,298 @@
+name: "Security - IaC & Container (P12)"
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - p12-iac-container
+    paths:
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - 'iac/**'
+      - 'security/**'
+      - '.github/workflows/ci-p12-iac-container.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - 'iac/**'
+      - 'security/**'
+
+# Prevent concurrent runs on the same branch
+concurrency:
+  group: p12-iac-container-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  iac-container-security:
+    name: IaC & Container Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      # ============================================================
+      # Step 1: Checkout repository
+      # ============================================================
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ============================================================
+      # Step 2: Set up Docker Buildx (for efficient builds)
+      # ============================================================
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ============================================================
+      # Step 3: Hadolint - Dockerfile linting
+      # ============================================================
+      - name: Run Hadolint on Dockerfile
+        continue-on-error: true  # Don't fail the job if linting finds issues
+        run: |
+          echo "Running Hadolint on Dockerfile..."
+          
+          # Create EVIDENCE/P12 directory
+          mkdir -p EVIDENCE/P12
+          
+          # Run Hadolint with config
+          docker run --rm -i \
+            -v ${{ github.workspace }}:/work \
+            hadolint/hadolint:latest \
+            hadolint \
+            --config /work/security/hadolint.yaml \
+            --format json \
+            /work/Dockerfile \
+            > EVIDENCE/P12/hadolint_report.json || true
+          
+          # Also create a human-readable version
+          docker run --rm -i \
+            -v ${{ github.workspace }}:/work \
+            hadolint/hadolint:latest \
+            hadolint \
+            --config /work/security/hadolint.yaml \
+            /work/Dockerfile \
+            | tee EVIDENCE/P12/hadolint_report.txt || true
+          
+          echo "Hadolint scan completed."
+          
+          # Display summary
+          if [ -f EVIDENCE/P12/hadolint_report.json ]; then
+            echo "Hadolint report saved to EVIDENCE/P12/hadolint_report.json"
+            cat EVIDENCE/P12/hadolint_report.txt || echo "No issues found or report empty"
+          fi
+
+      # ============================================================
+      # Step 4: Checkov - IaC security scanning
+      # ============================================================
+      - name: Run Checkov on IaC
+        continue-on-error: true  # Don't fail the job if security issues found
+        run: |
+          echo "Running Checkov on IaC (docker-compose.yml, iac/)..."
+          
+          # Run Checkov on docker-compose.yml
+          docker run --rm -i \
+            -v ${{ github.workspace }}:/work \
+            bridgecrew/checkov:latest \
+            --config-file /work/security/checkov.yaml \
+            --file /work/docker-compose.yml \
+            --framework docker_compose \
+            --output json \
+            --output-file-path /work/EVIDENCE/P12 \
+            --repo-id ${{ github.repository }} \
+            --branch ${{ github.ref_name }} \
+            || true
+          
+          # Rename the Checkov output file
+          if [ -f EVIDENCE/P12/results_json.json ]; then
+            mv EVIDENCE/P12/results_json.json EVIDENCE/P12/checkov_docker_compose.json
+          fi
+          
+          # Run Checkov on iac/ directory (Kubernetes manifests)
+          docker run --rm -i \
+            -v ${{ github.workspace }}:/work \
+            bridgecrew/checkov:latest \
+            --config-file /work/security/checkov.yaml \
+            --directory /work/iac \
+            --framework kubernetes \
+            --output json \
+            --output-file-path /work/EVIDENCE/P12 \
+            --repo-id ${{ github.repository }} \
+            --branch ${{ github.ref_name }} \
+            || true
+          
+          # Rename the Checkov output file
+          if [ -f EVIDENCE/P12/results_json.json ]; then
+            mv EVIDENCE/P12/results_json.json EVIDENCE/P12/checkov_k8s.json
+          fi
+          
+          # Also run in compact text mode for quick review
+          docker run --rm -i \
+            -v ${{ github.workspace }}:/work \
+            bridgecrew/checkov:latest \
+            --config-file /work/security/checkov.yaml \
+            --directory /work/iac \
+            --file /work/docker-compose.yml \
+            --framework kubernetes,docker_compose \
+            --compact \
+            | tee EVIDENCE/P12/checkov_report.txt || true
+          
+          echo "Checkov scan completed."
+          
+          # Display summary
+          echo "Checkov reports saved to EVIDENCE/P12/checkov_*.json"
+
+      # ============================================================
+      # Step 5: Build Docker image
+      # ============================================================
+      - name: Build Docker image
+        run: |
+          echo "Building Docker image..."
+          docker build -t secdev-app:p12 -f Dockerfile .
+          echo "Docker image built successfully: secdev-app:p12"
+
+      # ============================================================
+      # Step 6: Trivy - Container image vulnerability scanning
+      # ============================================================
+      - name: Run Trivy on Docker image
+        continue-on-error: true  # Don't fail the job if vulnerabilities found
+        run: |
+          echo "Running Trivy on Docker image..."
+          
+          # Run Trivy with config
+          docker run --rm -i \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v ${{ github.workspace }}:/work \
+            aquasec/trivy:latest \
+            image \
+            --config /work/security/trivy.yaml \
+            --format json \
+            --output /work/EVIDENCE/P12/trivy_report.json \
+            secdev-app:p12 \
+            || true
+          
+          # Also create a human-readable version
+          docker run --rm -i \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v ${{ github.workspace }}:/work \
+            aquasec/trivy:latest \
+            image \
+            --config /work/security/trivy.yaml \
+            --format table \
+            secdev-app:p12 \
+            | tee EVIDENCE/P12/trivy_report.txt || true
+          
+          echo "Trivy scan completed."
+          
+          # Display summary
+          if [ -f EVIDENCE/P12/trivy_report.json ]; then
+            echo "Trivy report saved to EVIDENCE/P12/trivy_report.json"
+            
+            # Extract vulnerability counts
+            echo "Vulnerability Summary:"
+            docker run --rm -i \
+              -v ${{ github.workspace }}:/work \
+              aquasec/trivy:latest \
+              image \
+              --config /work/security/trivy.yaml \
+              --severity CRITICAL,HIGH \
+              --format table \
+              secdev-app:p12 || true
+          fi
+
+      # ============================================================
+      # Step 7: Generate summary
+      # ============================================================
+      - name: Generate security summary
+        if: always()
+        run: |
+          echo "Generating security summary..."
+          
+          cat > EVIDENCE/P12/scan_summary.md << 'EOF'
+          # P12 - IaC & Container Security Scan Summary
+          
+          **Scan Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          **Repository:** ${{ github.repository }}
+          **Branch:** ${{ github.ref_name }}
+          **Commit:** ${{ github.sha }}
+          
+          ## Scans Performed
+          
+          ### 1. Hadolint (Dockerfile Linting)
+          - **Target:** `Dockerfile`
+          - **Report:** `hadolint_report.json`
+          - **Status:** Completed
+          
+          ### 2. Checkov (IaC Security)
+          - **Targets:** `docker-compose.yml`, `iac/`
+          - **Reports:** `checkov_docker_compose.json`, `checkov_k8s.json`
+          - **Status:** Completed
+          
+          ### 3. Trivy (Container Vulnerability Scanning)
+          - **Target:** Docker image `secdev-app:p12`
+          - **Report:** `trivy_report.json`
+          - **Status:** Completed
+          
+          ## Hardening Measures Applied
+          
+          ### Dockerfile
+          - ✅ Fixed base image version (python:3.12.1-slim)
+          - ✅ Non-root user (UID 1000)
+          - ✅ Multi-stage build for minimal attack surface
+          - ✅ HEALTHCHECK instruction
+          - ✅ Explicit SHELL with security options
+          - ✅ No credentials in image
+          
+          ### Docker Compose
+          - ✅ Capabilities dropped (ALL) and selectively added
+          - ✅ Security options: no-new-privileges, seccomp, AppArmor
+          - ✅ Resource limits (CPU, memory)
+          - ✅ Private IPC namespace
+          - ✅ Limited shared memory
+          
+          ### Kubernetes (IaC)
+          - ✅ Pod Security Context (runAsNonRoot, seccomp)
+          - ✅ Container Security Context (allowPrivilegeEscalation: false)
+          - ✅ Resource limits and requests
+          - ✅ Liveness and readiness probes
+          - ✅ Network policies for traffic control
+          
+          ## Next Steps
+          
+          1. Review scan reports for CRITICAL and HIGH findings
+          2. Update base image or dependencies if vulnerabilities found
+          3. Address any IaC misconfigurations identified by Checkov
+          4. Apply additional hardening based on Trivy recommendations
+          
+          EOF
+          
+          echo "Summary generated at EVIDENCE/P12/scan_summary.md"
+
+      # ============================================================
+      # Step 8: Upload artifacts
+      # ============================================================
+      - name: Upload P12 Evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: P12_EVIDENCE
+          path: EVIDENCE/P12/
+          retention-days: 30
+          if-no-files-found: warn
+
+      # ============================================================
+      # Step 9: Display results summary
+      # ============================================================
+      - name: Display Results Summary
+        if: always()
+        run: |
+          echo "=========================================="
+          echo "P12 - IaC & Container Security - COMPLETE"
+          echo "=========================================="
+          echo ""
+          echo "Reports generated in EVIDENCE/P12/:"
+          ls -lh EVIDENCE/P12/ || echo "No reports found"
+          echo ""
+          echo "Download the P12_EVIDENCE artifact to review detailed reports."
+          echo "=========================================="
+

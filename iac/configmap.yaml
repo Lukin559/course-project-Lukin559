@@ -1,0 +1,12 @@
+# Kubernetes ConfigMap for SecDev Course App
+# Stores non-sensitive configuration data
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: secdev-app-config
+  labels:
+    app: secdev-app
+data:
+  log_level: "INFO"
+  environment: "production"
+

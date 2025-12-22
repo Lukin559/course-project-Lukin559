@@ -1,0 +1,107 @@
+# Kubernetes Deployment for SecDev Course App
+# This manifest defines how to deploy the application in a Kubernetes cluster
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: secdev-app
+  labels:
+    app: secdev-app
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: secdev-app
+  template:
+    metadata:
+      labels:
+        app: secdev-app
+        version: v1
+    spec:
+      # Security Context for Pod
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      
+      containers:
+      - name: app
+        image: secdev-app:latest
+        imagePullPolicy: Always
+        
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        
+        # Security Context for Container
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+              - ALL
+            add:
+              - NET_BIND_SERVICE
+          readOnlyRootFilesystem: false  # Set to true if app is stateless
+        
+        # Resource limits and requests
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 250m
+            memory: 256Mi
+        
+        # Liveness probe (is container alive?)
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 3
+          failureThreshold: 3
+        
+        # Readiness probe (can container accept traffic?)
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        
+        # Environment variables (non-sensitive)
+        env:
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        - name: PYTHONDONTWRITEBYTECODE
+          value: "1"
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: secdev-app-config
+              key: log_level
+              optional: true
+        
+        # Volume mounts (if needed)
+        # volumeMounts:
+        # - name: app-data
+        #   mountPath: /app/data
+      
+      # Volumes (if needed)
+      # volumes:
+      # - name: app-data
+      #   emptyDir: {}
+      
+      # Tolerations and affinity (optional)
+      # nodeSelector:
+      #   kubernetes.io/os: linux
+

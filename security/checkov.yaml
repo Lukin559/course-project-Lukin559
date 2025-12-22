@@ -1,0 +1,35 @@
+# Checkov configuration for IaC security scanning
+# Checkov scans cloud infrastructure configurations to find security misconfigurations
+# https://www.checkov.io/
+
+# Output format
+quiet: false
+compact: true
+
+# Frameworks to scan
+framework:
+  - kubernetes
+  - dockerfile
+  - docker_compose
+
+# Severity threshold (optional)
+# check-type:
+#   - CKV_K8S
+#   - CKV_DOCKER
+
+# Skip specific checks (with justification):
+skip-check:
+  # CKV_DOCKER_2: HEALTHCHECK instruction missing - we have it in Dockerfile
+  # CKV_DOCKER_3: USER instruction missing - we have non-root user
+  # Example: skip checks that don't apply to our setup
+  # - CKV_K8S_8  # Liveness probe - may skip for simple apps
+  # - CKV_K8S_9  # Readiness probe - may skip for simple apps
+
+# Directories to skip
+# skip-path:
+#   - tests/
+#   - .github/
+
+# Enable soft-fail mode (optional - don't fail build on policy violations)
+# soft-fail: true
+
